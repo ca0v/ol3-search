@@ -1010,7 +1010,7 @@ define("bower_components/ol3-symbolizer/index", ["require", "exports", "bower_co
     "use strict";
     return Symbolizer;
 });
-define("ol3-search/providers/osm", ["require", "exports", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, common_3) {
+define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_3) {
     "use strict";
     var DEFAULTS = {
         url: '//nominatim.openstreetmap.org/search/',
@@ -1033,7 +1033,7 @@ define("ol3-search/providers/osm", ["require", "exports", "bower_components/ol3-
                 url: DEFAULTS.url,
                 params: common_3.mixin(common_3.mixin({}, DEFAULTS.params), options)
             };
-            if (result.params.bounded && !result.params.viewbox && map) {
+            if (!result.params.viewbox && map) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
                 var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
@@ -1798,6 +1798,10 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
             expanded: true,
             placeholderText: "Nominatim Search Form",
             fields: [
+                {
+                    name: "q",
+                    alias: "*"
+                },
                 {
                     name: "postalcode",
                     alias: "Postal Code"

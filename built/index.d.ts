@@ -283,6 +283,7 @@ declare module "bower_components/ol3-symbolizer/index" {
     export = Symbolizer;
 }
 declare module "ol3-search/providers/osm" {
+    import ol = require("openlayers");
     export module OpenStreet {
         interface Address {
             road: string;

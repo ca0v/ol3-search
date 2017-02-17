@@ -1,4 +1,5 @@
 // https://github.com/jonataswalker/ol3-geocoder/blob/master/src/js/providers/osm.js
+import ol = require("openlayers");
 import { mixin } from "ol3-fun/ol3-fun/common";
 
 export module OpenStreet {
@@ -108,7 +109,7 @@ export class OpenStreet {
             params: mixin(mixin({}, DEFAULTS.params), options)
         };
 
-        if (result.params.bounded && !result.params.viewbox && map) {
+        if (!result.params.viewbox && map) {
             let extent = map.getView().calculateExtent(map.getSize());
             let [left, bottom] = ol.extent.getBottomLeft(extent);
             let [right, top] = ol.extent.getTopRight(extent);

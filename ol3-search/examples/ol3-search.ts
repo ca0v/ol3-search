@@ -180,6 +180,10 @@ table.ol-grid-table > td {
         placeholderText: "Nominatim Search Form",
         fields: [
             {
+                name: "q",
+                alias: "*"
+            },
+            {
                 name: "postalcode",
                 alias: "Postal Code"
             },

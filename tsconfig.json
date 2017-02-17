@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "module": "amd",
+        "target": "es5",
+        "declaration": true,
+        "noImplicitAny": false,
+        "outFile": "built/index.js",
+        "sourceMap": true,
+        "moduleResolution": "node",
+        "baseUrl": "./bower_components"
+    },
+    "include": [
+        "index.ts",
+        "ol3-search",
+        "typings/index.d.ts"
+    ]
+}

@@ -1035,8 +1035,8 @@ define("ol3-search/providers/osm", ["require", "exports", "bower_components/ol3-
             };
             if (result.params.bounded && !result.params.viewbox && map) {
                 var extent = map.getView().calculateExtent(map.getSize());
-                var _a = ol.extent.getBottomLeft(extent), bottom = _a[0], left = _a[1];
-                var _b = ol.extent.getTopRight(extent), top_1 = _b[0], right = _b[1];
+                var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
+                var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
                 var inSrs = map.getView().getProjection();
                 _c = ol.proj.transform([left, top_1], inSrs, "EPSG:4326"), left = _c[0], top_1 = _c[1];
                 _d = ol.proj.transform([right, bottom], inSrs, "EPSG:4326"), right = _d[0], bottom = _d[1];
@@ -1052,7 +1052,7 @@ define("ol3-search/providers/osm", ["require", "exports", "bower_components/ol3-
             }
             if (result.params.viewbox) {
                 var x = result.params.viewbox;
-                result.params.viewbox = [x.left, x.top, x.right, x.bottom].join(",");
+                result.params.viewbox = [x.left, x.top, x.right, x.bottom].map(function (v) { return v.toFixed(5); }).join(",");
             }
             Object.keys(result.params).filter(function (k) { return typeof result.params[k] === "boolean"; }).forEach(function (k) {
                 result.params[k] = result.params[k] ? "1" : "0";
@@ -1845,7 +1845,6 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                 return;
             console.log("search", args.value);
             var searchArgs = searchProvider.getParameters(args.value, map);
-            debugger;
             $.ajax({
                 url: searchArgs.url,
                 method: searchProvider.method || 'GET',

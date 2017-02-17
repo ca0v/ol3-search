@@ -110,8 +110,8 @@ export class OpenStreet {
 
         if (result.params.bounded && !result.params.viewbox && map) {
             let extent = map.getView().calculateExtent(map.getSize());
-            let [bottom, left] = ol.extent.getBottomLeft(extent);
-            let [top, right] = ol.extent.getTopRight(extent);
+            let [left, bottom] = ol.extent.getBottomLeft(extent);
+            let [right, top] = ol.extent.getTopRight(extent);
             let inSrs = map.getView().getProjection();
             [left, top] = ol.proj.transform([left, top], inSrs, "EPSG:4326");
             [right, bottom] = ol.proj.transform([right, bottom], inSrs, "EPSG:4326");
@@ -130,7 +130,7 @@ export class OpenStreet {
 
         if (result.params.viewbox) {
             let x = result.params.viewbox;
-            result.params.viewbox = <any>[x.left, x.top, x.right, x.bottom].join(",");
+            result.params.viewbox = <any>[x.left, x.top, x.right, x.bottom].map(v => v.toFixed(5)).join(",");
         }
 
         Object.keys(result.params).filter(k => typeof result.params[k] === "boolean").forEach(k => {

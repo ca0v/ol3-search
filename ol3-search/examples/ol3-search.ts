@@ -227,7 +227,6 @@ table.ol-grid-table > td {
         console.log("search", args.value);
 
         let searchArgs = searchProvider.getParameters(args.value, map);
-        debugger;
 
         $.ajax({
             url: searchArgs.url,

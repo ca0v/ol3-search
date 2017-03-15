@@ -161,7 +161,7 @@ table.ol-grid-table > td {
     let form = SearchForm.create({
         className: 'ol-search top right',
         expanded: true,
-        placeholderText: "Nominatim Search Form",
+        title: "Nominatim Search Form",
         fields: [
             {
                 name: "q",

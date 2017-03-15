@@ -43,13 +43,16 @@ declare module "ol3-search/ol3-search" {
         autoCollapse?: boolean;
         canCollapse?: boolean;
         closedText?: string;
+        showLabels?: boolean;
         openedText?: string;
         source?: HTMLElement;
         target?: HTMLElement;
-        placeholderText?: string;
+        title?: string;
         fields?: {
             name: string;
             type?: "string" | "integer" | "number" | "boolean";
+            default?: string | number | boolean;
+            placeholder?: string;
             alias?: string;
             regex?: RegExp;
             domain?: {
@@ -342,6 +345,7 @@ declare module "bower_components/ol3-symbolizer/index" {
     export = Symbolizer;
 }
 declare module "ol3-search/providers/google" {
+    import ol = require("openlayers");
     import { Result } from "./index";
     export const GoogleMappingTable: {
         name: string[];
@@ -355,6 +359,14 @@ declare module "ol3-search/providers/google" {
         types: Array<string>;
         long_name: string;
     }
+    export interface GoogleRequest {
+        address?: string;
+        components?: string;
+        key?: string;
+        bounds?: string;
+        language?: string;
+        region?: string;
+    }
     export interface GoogleResponseItem {
         address_components: Array<GoogleAddressComponent>;
         geometry: {
@@ -362,37 +374,52 @@ declare module "ol3-search/providers/google" {
                 lat: number;
                 lng: number;
             };
+            location_type: string;
+            viewport: {
+                northeast: {
+                    lat: number;
+                    lng: number;
+                };
+                southwest: {
+                    lat: number;
+                    lng: number;
+                };
+            };
         };
         formatted_address: string;
+        place_id: string;
+        types: string[];
     }
     export interface GoogleResponse {
         status: string;
         results: Array<GoogleResponseItem>;
     }
-    export interface GoogleOptions {
+    export interface GoogleGeocodeOptions {
         url?: string;
         params?: {
             address?: string;
             key?: string;
             language?: string;
+            route?: string;
+            locality?: string;
+            administrative_area?: string;
+            postal_code?: string;
+            country?: string;
         };
     }
     export type ResultType = Result<GoogleResponseItem>;
-    export class Google {
-        static DEFAULT_OPTIONS: GoogleOptions;
+    export class GoogleGeocode {
+        static DEFAULT_OPTIONS: GoogleGeocodeOptions;
         private options;
-        constructor(options?: GoogleOptions);
+        constructor(options?: GoogleGeocodeOptions);
         getParameters(options: {
             query?: string;
             key?: string;
             lang?: string;
+            bounded?: boolean;
         }, map?: ol.Map): {
             url: string;
-            params: {
-                address: string;
-                key: string;
-                language: string;
-            };
+            params: GoogleRequest;
         };
         handleResponse(response: GoogleResponse): Result<GoogleResponseItem>[];
         private parseComponents(address_components, result);

@@ -108,14 +108,17 @@ export interface IOptions {
     autoCollapse?: boolean;
     canCollapse?: boolean;
     closedText?: string;
+    showLabels?: boolean;
     openedText?: string;
     source?: HTMLElement;
     target?: HTMLElement;
     // what to show on the tooltip
-    placeholderText?: string;
+    title?: string;
     fields?: {
         name: string;
         type?: "string" | "integer" | "number" | "boolean";
+        default?: string | number | boolean;
+        placeholder?: string;
         alias?: string;
         regex?: RegExp;
         domain?: {
@@ -147,7 +150,8 @@ const defaults: IOptions = {
     hideButton: false,
     closedText: expando.right,
     openedText: expando.left,
-    placeholderText: 'Search',
+    title: 'Search',
+    showLabels: false,
 };
 
 export class SearchForm extends ol.control.Control {
@@ -201,7 +205,7 @@ export class SearchForm extends ol.control.Control {
 
         let button = this.button = document.createElement('button');
         button.setAttribute('type', 'button');
-        button.title = options.placeholderText;
+        button.title = options.title;
         options.element.appendChild(button);
         if (options.hideButton) {
             button.style.display = "none";
@@ -209,13 +213,11 @@ export class SearchForm extends ol.control.Control {
 
         let form = this.form = <HTMLFormElement>html(`
         <form>
-            <label class="title">${options.placeholderText}</label>
+            ${options.title ? `<label class="title">${options.title}</label>` : ""}
             <section class="header"></section>
             <section class="body">
             <table class="fields">
-                <thead>
-                    <tr><td>Field</td><td>Value</td></tr>
-                </thead>
+            ${options.showLabels ? `<thead><tr><td>Field</td><td>Value</td></tr></thead>` : ""}
                 <tbody>
                     <tr><td>Field</td><td>Value</td></tr>
                 </tbody>
@@ -231,35 +233,47 @@ export class SearchForm extends ol.control.Control {
             let body = form.getElementsByTagName("tbody")[0];
             body.innerHTML = "";
             options.fields.forEach(field => {
+                field.alias = field.alias || field.name;
+                field.name = field.name || field.alias;
+
                 let tr = document.createElement("tr");
-                let label = document.createElement("td");
                 let value = document.createElement("td");
+                if (!field.type && typeof field.default !== "undefined") {
+                    field.type = <any>typeof field.default;
+                }
                 field.type = field.type || "string";
-                label.innerHTML = `<label for="${field.name}" class="ol-search-label">${field.alias}</label>`;
+                if (options.showLabels) {
+                    let label = document.createElement("td");
+                    label.innerHTML = `<label for="${field.name}" class="ol-search-label">${field.alias}</label>`;
+                    tr.appendChild(label);
+                }
+                tr.appendChild(value);
+
                 let input: HTMLInputElement;
                 switch (field.type) {
                     case "boolean":
-                        input = <HTMLInputElement>html(`<input class="input" name="${field.name}" type="checkbox" />`);
+                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="checkbox" ${field.default ? "checked" : ""} />`);
                         break;
                     case "integer":
-                        input = <HTMLInputElement>html(`<input class="input" name="${field.name}" type="number" min="0" step="1" />`);
+                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" step="1" ${field.default ? `value="${field.default}"` : ""} />`);
                         break;
                     case "number":
-                        input = <HTMLInputElement>html(`<input class="input" name="${field.name}" type="number" min="0" max="${Array(field.length || 3).join("9")}" />`);
+                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" max="${Array(field.length || 3).join("9")}" />`);
                         break;
                     case "string":
                     default:
-                        input = <HTMLInputElement>html(`<input class="input" name="${field.name}" type="text" />`);
+                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="text" ${field.default ? `value="${field.default}"` : ""} />`);
                         input.maxLength = field.length || 20;
                         break;
                 }
+
+                input.title = field.alias;
+                input.placeholder = field.placeholder || field.alias;
 
                 input.addEventListener("focus", () => tr.classList.add("focus"));
                 input.addEventListener("blur", () => tr.classList.remove("focus"));
 
                 value.appendChild(input);
-                tr.appendChild(label);
-                tr.appendChild(value);
                 body.appendChild(tr);
             });
         }

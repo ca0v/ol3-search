@@ -210,7 +210,8 @@ define("ol3-search/ol3-search", ["require", "exports", "openlayers", "bower_comp
         hideButton: false,
         closedText: expando.right,
         openedText: expando.left,
-        placeholderText: 'Search',
+        title: 'Search',
+        showLabels: false,
     };
     var SearchForm = (function (_super) {
         __extends(SearchForm, _super);
@@ -228,44 +229,53 @@ define("ol3-search/ol3-search", ["require", "exports", "openlayers", "bower_comp
             _this.options = options;
             var button = _this.button = document.createElement('button');
             button.setAttribute('type', 'button');
-            button.title = options.placeholderText;
+            button.title = options.title;
             options.element.appendChild(button);
             if (options.hideButton) {
                 button.style.display = "none";
             }
-            var form = _this.form = common_1.html(("\n        <form>\n            <label class=\"title\">" + options.placeholderText + "</label>\n            <section class=\"header\"></section>\n            <section class=\"body\">\n            <table class=\"fields\">\n                <thead>\n                    <tr><td>Field</td><td>Value</td></tr>\n                </thead>\n                <tbody>\n                    <tr><td>Field</td><td>Value</td></tr>\n                </tbody>\n            </table>\n            </section>\n            <section class=\"footer\"></section>\n        </form>\n        ").trim());
+            var form = _this.form = common_1.html(("\n        <form>\n            " + (options.title ? "<label class=\"title\">" + options.title + "</label>" : "") + "\n            <section class=\"header\"></section>\n            <section class=\"body\">\n            <table class=\"fields\">\n            " + (options.showLabels ? "<thead><tr><td>Field</td><td>Value</td></tr></thead>" : "") + "\n                <tbody>\n                    <tr><td>Field</td><td>Value</td></tr>\n                </tbody>\n            </table>\n            </section>\n            <section class=\"footer\"></section>\n        </form>\n        ").trim());
             options.element.appendChild(form);
             {
                 var body_1 = form.getElementsByTagName("tbody")[0];
                 body_1.innerHTML = "";
                 options.fields.forEach(function (field) {
+                    field.alias = field.alias || field.name;
+                    field.name = field.name || field.alias;
                     var tr = document.createElement("tr");
-                    var label = document.createElement("td");
                     var value = document.createElement("td");
+                    if (!field.type && typeof field.default !== "undefined") {
+                        field.type = typeof field.default;
+                    }
                     field.type = field.type || "string";
-                    label.innerHTML = "<label for=\"" + field.name + "\" class=\"ol-search-label\">" + field.alias + "</label>";
+                    if (options.showLabels) {
+                        var label = document.createElement("td");
+                        label.innerHTML = "<label for=\"" + field.name + "\" class=\"ol-search-label\">" + field.alias + "</label>";
+                        tr.appendChild(label);
+                    }
+                    tr.appendChild(value);
                     var input;
                     switch (field.type) {
                         case "boolean":
-                            input = common_1.html("<input class=\"input\" name=\"" + field.name + "\" type=\"checkbox\" />");
+                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"checkbox\" " + (field.default ? "checked" : "") + " />");
                             break;
                         case "integer":
-                            input = common_1.html("<input class=\"input\" name=\"" + field.name + "\" type=\"number\" min=\"0\" step=\"1\" />");
+                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" step=\"1\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
                             break;
                         case "number":
-                            input = common_1.html("<input class=\"input\" name=\"" + field.name + "\" type=\"number\" min=\"0\" max=\"" + Array(field.length || 3).join("9") + "\" />");
+                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" max=\"" + Array(field.length || 3).join("9") + "\" />");
                             break;
                         case "string":
                         default:
-                            input = common_1.html("<input class=\"input\" name=\"" + field.name + "\" type=\"text\" />");
+                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"text\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
                             input.maxLength = field.length || 20;
                             break;
                     }
+                    input.title = field.alias;
+                    input.placeholder = field.placeholder || field.alias;
                     input.addEventListener("focus", function () { return tr.classList.add("focus"); });
                     input.addEventListener("blur", function () { return tr.classList.remove("focus"); });
                     value.appendChild(input);
-                    tr.appendChild(label);
-                    tr.appendChild(value);
                     body_1.appendChild(tr);
                 });
             }
@@ -1282,7 +1292,7 @@ define("bower_components/ol3-symbolizer/index", ["require", "exports", "bower_co
     "use strict";
     return Symbolizer;
 });
-define("ol3-search/providers/google", ["require", "exports", "bower_components/ol3-fun/index"], function (require, exports, ol3_fun_2) {
+define("ol3-search/providers/google", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_2) {
     "use strict";
     exports.GoogleMappingTable = {
         name: [
@@ -1303,12 +1313,12 @@ define("ol3-search/providers/google", ["require", "exports", "bower_components/o
         country: ['country']
     };
     var GoogleMappingKeys = Object.keys(exports.GoogleMappingTable);
-    var Google = (function () {
-        function Google(options) {
-            this.options = ol3_fun_2.defaults(options || {}, Google.DEFAULT_OPTIONS);
+    var GoogleGeocode = (function () {
+        function GoogleGeocode(options) {
+            this.options = ol3_fun_2.defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
         }
-        Google.prototype.getParameters = function (options, map) {
-            return {
+        GoogleGeocode.prototype.getParameters = function (options, map) {
+            var params = {
                 url: this.options.url,
                 params: {
                     address: options.query || this.options.params.address,
@@ -1316,11 +1326,20 @@ define("ol3-search/providers/google", ["require", "exports", "bower_components/o
                     language: options.lang || this.options.params.language
                 }
             };
+            if (map && options.bounded) {
+                var extent = map.getView().calculateExtent(map.getSize());
+                var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
+                {
+                    var b = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent().map(function (v) { return v.toFixed(6); });
+                    params.params.bounds = b[1] + "," + b[0] + "|" + b[3] + "," + b[2];
+                }
+            }
+            return params;
         };
-        Google.prototype.handleResponse = function (response) {
+        GoogleGeocode.prototype.handleResponse = function (response) {
             var _this = this;
             console.assert(response.status === "OK", "status OK");
-            return response.results.map(function (result) {
+            var result = response.results.map(function (result) {
                 var returnValue = {
                     lat: result.geometry.location.lat,
                     lon: result.geometry.location.lng,
@@ -1330,8 +1349,9 @@ define("ol3-search/providers/google", ["require", "exports", "bower_components/o
                 _this.parseComponents(result.address_components, returnValue);
                 return returnValue;
             });
+            return result;
         };
-        Google.prototype.parseComponents = function (address_components, result) {
+        GoogleGeocode.prototype.parseComponents = function (address_components, result) {
             address_components.forEach(function (addressComponent) {
                 addressComponent.types.forEach(function (googleType) {
                     GoogleMappingKeys.forEach(function (typeKey) {
@@ -1342,17 +1362,18 @@ define("ol3-search/providers/google", ["require", "exports", "bower_components/o
                 });
             });
         };
-        return Google;
+        return GoogleGeocode;
     }());
-    Google.DEFAULT_OPTIONS = {
+    GoogleGeocode.DEFAULT_OPTIONS = {
         url: '//maps.googleapis.com/maps/api/geocode/json',
         params: {
             address: '',
             key: '',
-            language: 'en-US'
+            language: 'en-US',
+            country: 'US'
         }
     };
-    exports.Google = Google;
+    exports.GoogleGeocode = GoogleGeocode;
 });
 define("bower_components/ol3-symbolizer/ol3-symbolizer/common/ajax", ["require", "exports", "jquery"], function (require, exports, $) {
     "use strict";
@@ -1960,11 +1981,11 @@ define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["requir
     }());
     exports.ArcGisVectorSourceFactory = ArcGisVectorSourceFactory;
 });
-define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_1, ol3_symbolizer_1, ol3_search_1, google_1, ol3_fun_3, ags_source_1) {
+define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_1, ol3_search_1, google_1, ol3_fun_3) {
     "use strict";
     function run() {
-        ol3_fun_3.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
-        var searchProvider = new google_1.Google();
+        ol3_fun_3.cssin("examples/googl-search", "\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n.ol-search table {\n    width: 100%;\n}\n\n.ol-search .input {\n    width: 100%;\n}\n\n.ol-search input[type=\"checkbox\"] {\n    width: auto;\n}\n    ");
+        var searchProvider = new google_1.GoogleGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -1972,7 +1993,8 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
             target: mapContainer,
             layers: [
                 new ol.layer.Tile({
-                    source: new ol.source.OSM()
+                    source: new ol.source.OSM({ opaque: true }),
+                    visible: true
                 })
             ],
             view: new ol.View({
@@ -1988,86 +2010,51 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
             style: function (feature, resolution) {
                 var style = feature.getStyle();
                 if (!style) {
-                    style = symbolizer.fromJson({
-                        circle: {
-                            radius: 4,
-                            fill: {
-                                color: "rgba(33, 33, 33, 0.2)"
+                    var styleJson = [{
+                            circle: {
+                                radius: 4,
+                                fill: {
+                                    color: "rgba(33, 33, 33, 0.2)"
+                                },
+                                stroke: {
+                                    color: "#F00"
+                                }
                             },
-                            stroke: {
-                                color: "#F00"
+                            text: {
+                                text: feature.get("text"),
+                                "offset-y": -15
                             }
-                        },
-                        text: {
-                            text: feature.get("text")
-                        }
-                    });
+                        }];
+                    if (feature.get("airport")) {
+                        styleJson.push({
+                            text: {
+                                text: "AIRPORT",
+                                "offset-y": 15
+                            }
+                        });
+                    }
+                    style = styleJson.map(function (s) { return symbolizer.fromJson(s); });
                     feature.setStyle(style);
                 }
                 return style;
             }
         });
-        ags_source_1.ArcGisVectorSourceFactory.create({
-            map: map,
-            services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
-            serviceName: 'USA_States_Generalized',
-            layers: [0]
-        }).then(function (layers) {
-            layers.forEach(function (layer) {
-                layer.setStyle(function (feature, resolution) {
-                    var style = feature.getStyle();
-                    if (!style) {
-                        style = symbolizer.fromJson({
-                            fill: {
-                                color: "rgba(200,200,200,0.5)"
-                            },
-                            stroke: {
-                                color: "rgba(33,33,33,0.8)",
-                                width: 3
-                            },
-                            text: {
-                                text: feature.get("STATE_ABBR")
-                            }
-                        });
-                        feature.setStyle(style);
-                    }
-                    return style;
-                });
-                map.addLayer(layer);
-                var grid = ol3_grid_1.Grid.create({
-                    map: map,
-                    className: "ol-grid statecode top left-2",
-                    expanded: true,
-                    currentExtent: true,
-                    autoCollapse: true,
-                    // we do it ourselves
-                    autoPan: false,
-                    showIcon: true,
-                    layers: [layer]
-                });
-                grid.on("feature-click", function (args) {
-                    ol3_fun_3.navigation.zoomToFeature(map, args.feature);
-                });
-                grid.on("feature-hover", function (args) {
-                    // TODO: highlight args.feature
-                });
-            });
-        }).then(function () {
-            map.addLayer(vector);
-        });
+        map.addLayer(vector);
         var form = ol3_search_1.SearchForm.create({
             className: 'ol-search top right',
             expanded: true,
-            placeholderText: "Google Search Form",
+            title: "Google Search Form",
             fields: [
                 {
                     name: "query",
-                    alias: "*"
+                    alias: "Location",
+                    default: "LAX",
+                    length: 50
                 },
                 {
                     name: "bounded",
                     alias: "Current Extent?",
-                    type: "boolean"
+                    default: true
                 }
             ]
         });
@@ -2084,11 +2071,21 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
                 var results = searchProvider.handleResponse(json);
                 results.some(function (r) {
                     console.log(r);
-                    {
-                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
-                        var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                        feature.set("text", r.original.formatted_address);
-                        source.addFeature(feature);
+                    if (r.address) {
+                        var geom = new ol.geom.Point([r.lon, r.lat]).transform("EPSG:4326", map.getView().getProjection());
+                        var feature_1 = new ol.Feature(geom);
+                        feature_1.set("text", r.original.formatted_address);
+                        r.original.types.forEach(function (t) { return feature_1.set(t, true); });
+                        source.addFeature(feature_1);
+                    }
+                    if (r.original.geometry.viewport) {
+                        var v = r.original.geometry.viewport;
+                        var geom = new ol.geom.Polygon([[
+                                [v.southwest.lng, v.southwest.lat],
+                                [v.northeast.lng, v.northeast.lat]
+                            ]]).transform("EPSG:4326", map.getView().getProjection());
+                        var feature = new ol.Feature(geom);
+                        //source.addFeature(feature);
                         ol3_fun_3.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
@@ -2191,7 +2188,7 @@ define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_c
     }());
     exports.OpenStreet = OpenStreet;
 });
-define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_2, ol3_symbolizer_2, ol3_search_2, osm_1, ol3_fun_4, ags_source_2) {
+define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_1, ol3_symbolizer_2, ol3_search_2, osm_1, ol3_fun_4, ags_source_1) {
     "use strict";
     function run() {
         ol3_fun_4.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
@@ -2238,7 +2235,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                 return style;
             }
         });
-        ags_source_2.ArcGisVectorSourceFactory.create({
+        ags_source_1.ArcGisVectorSourceFactory.create({
             map: map,
             services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
             serviceName: 'USA_States_Generalized',
@@ -2265,7 +2262,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                     return style;
                 });
                 map.addLayer(layer);
-                var grid = ol3_grid_2.Grid.create({
+                var grid = ol3_grid_1.Grid.create({
                     map: map,
                     className: "ol-grid statecode top left-2",
                     expanded: true,
@@ -2289,7 +2286,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
         var form = ol3_search_2.SearchForm.create({
             className: 'ol-search top right',
             expanded: true,
-            placeholderText: "Nominatim Search Form",
+            title: "Nominatim Search Form",
             fields: [
                 {
                     name: "q",
@@ -2385,7 +2382,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
     }
     exports.run = run;
 });
-define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_3, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_5, ags_source_3) {
+define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_2, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_5, ags_source_2) {
     "use strict";
     function run() {
         ol3_fun_5.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
@@ -2432,7 +2429,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
                 return style;
             }
         });
-        ags_source_3.ArcGisVectorSourceFactory.create({
+        ags_source_2.ArcGisVectorSourceFactory.create({
             map: map,
             services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
             serviceName: 'USA_States_Generalized',
@@ -2459,7 +2456,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
                     return style;
                 });
                 map.addLayer(layer);
-                var grid = ol3_grid_3.Grid.create({
+                var grid = ol3_grid_2.Grid.create({
                     map: map,
                     className: "ol-grid statecode top left-2",
                     expanded: true,
@@ -2483,7 +2480,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
         var form = ol3_search_3.SearchForm.create({
             className: 'ol-search top right',
             expanded: true,
-            placeholderText: "Nominatim Search Form",
+            title: "Nominatim Search Form",
             fields: [
                 {
                     name: "q",

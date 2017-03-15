@@ -2,42 +2,15 @@ import ol = require("openlayers");
 import $ = require("jquery");
 
 import { Grid } from "ol3-grid";
-import { StyleConverter } from "ol3-symbolizer";
+import { StyleConverter, Format } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { Google } from "../providers/google";
+import { GoogleGeocode } from "../providers/google";
 import { cssin, navigation, mixin } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
 export function run() {
 
-    cssin("examples/ol3-search", `
-
-.ol-grid.statecode .ol-grid-container {
-    background-color: white;
-    width: 10em;
-}
-
-.ol-grid .ol-grid-container.ol-hidden {
-}
-
-.ol-grid .ol-grid-container {
-    width: 15em;
-}
-
-.ol-grid-table {
-    width: 100%;
-}
-
-table.ol-grid-table {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-table.ol-grid-table > td {
-    padding: 8px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
+    cssin("examples/googl-search", `
 
 .ol-search tr.focus {
     background: white;
@@ -51,9 +24,20 @@ table.ol-grid-table > td {
     white-space: nowrap;
 }
 
+.ol-search table {
+    width: 100%;
+}
+
+.ol-search .input {
+    width: 100%;
+}
+
+.ol-search input[type="checkbox"] {
+    width: auto;
+}
     `);
 
-    let searchProvider = new Google();
+    let searchProvider = new GoogleGeocode();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
@@ -64,7 +48,8 @@ table.ol-grid-table > td {
         target: mapContainer,
         layers: [
             new ol.layer.Tile({
-                source: new ol.source.OSM()
+                source: new ol.source.OSM({ opaque: true }),
+                visible: true
             })
         ],
         view: new ol.View({
@@ -83,7 +68,7 @@ table.ol-grid-table > td {
         style: (feature: ol.Feature, resolution: number) => {
             let style = feature.getStyle();
             if (!style) {
-                style = symbolizer.fromJson({
+                let styleJson = <Array<Format.Style>>[{
                     circle: {
                         radius: 4,
                         fill: {
@@ -94,83 +79,41 @@ table.ol-grid-table > td {
                         }
                     },
                     text: {
-                        text: feature.get("text")
+                        text: feature.get("text"),
+                        "offset-y": -15
                     }
-                });
+                }];
+                if (feature.get("airport")) {
+                    styleJson.push({
+                        text: {
+                            text: "AIRPORT",
+                            "offset-y": 15
+                        }
+                    });
+                }
+                style = styleJson.map(s => symbolizer.fromJson(s));
                 feature.setStyle(style);
             }
             return <ol.style.Style>style;
         }
     });
-
-    ArcGisVectorSourceFactory.create({
-        map: map,
-        services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
-        serviceName: 'USA_States_Generalized',
-        layers: [0]
-    }).then(layers => {
-        layers.forEach(layer => {
-
-            layer.setStyle((feature: ol.Feature, resolution) => {
-                let style = <ol.style.Style>feature.getStyle();
-                if (!style) {
-                    style = symbolizer.fromJson({
-                        fill: {
-                            color: "rgba(200,200,200,0.5)"
-                        },
-                        stroke: {
-                            color: "rgba(33,33,33,0.8)",
-                            width: 3
-                        },
-                        text: {
-                            text: feature.get("STATE_ABBR")
-                        }
-                    });
-                    feature.setStyle(style);
-                }
-                return style;
-            });
-
-            map.addLayer(layer);
-
-            let grid = Grid.create({
-                map: map,
-                className: "ol-grid statecode top left-2",
-                expanded: true,
-                currentExtent: true,
-                autoCollapse: true,
-                // we do it ourselves
-                autoPan: false,
-                showIcon: true,
-                layers: [layer]
-            });
-
-            grid.on("feature-click", args => {
-                navigation.zoomToFeature(map, args.feature);
-            });
-
-            grid.on("feature-hover", args => {
-                // TODO: highlight args.feature
-            });
-
-        });
-    }).then(() => {
-        map.addLayer(vector);
-    });
+    map.addLayer(vector);
 
     let form = SearchForm.create({
         className: 'ol-search top right',
         expanded: true,
-        placeholderText: "Google Search Form",
+        title: "Google Search Form",
         fields: [
             {
                 name: "query",
-                alias: "*"
+                alias: "Location",
+                default: "LAX",
+                length: 50
             },
             {
                 name: "bounded",
                 alias: "Current Extent?",
-                type: "boolean"
+                default: true
             }
         ]
     });
@@ -189,11 +132,22 @@ table.ol-grid-table > td {
             let results = searchProvider.handleResponse(json);
             results.some(r => {
                 console.log(r);
-                {
-                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
-                    let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                if (r.address) {
+                    let geom = new ol.geom.Point([r.lon, r.lat]).transform("EPSG:4326", map.getView().getProjection());
+                    let feature = new ol.Feature(geom);
                     feature.set("text", r.original.formatted_address);
+                    r.original.types.forEach(t => feature.set(t, true));
                     source.addFeature(feature);
+                }
+                if (r.original.geometry.viewport) {
+                    let v = r.original.geometry.viewport;
+                    let geom = new ol.geom.Polygon([[
+                        [v.southwest.lng, v.southwest.lat],
+                        [v.northeast.lng, v.northeast.lat]
+                    ]]).transform("EPSG:4326", map.getView().getProjection());
+
+                    let feature = new ol.Feature(geom);
+                    //source.addFeature(feature);
                     navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;

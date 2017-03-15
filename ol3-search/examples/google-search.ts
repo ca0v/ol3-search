@@ -68,7 +68,7 @@ export function run() {
         style: (feature: ol.Feature, resolution: number) => {
             let style = feature.getStyle();
             if (!style) {
-                let styleJson = <Array<Format.Style>>[{
+                let styleJson: Array<Format.Style> = [{
                     circle: {
                         radius: 4,
                         fill: {
@@ -85,9 +85,19 @@ export function run() {
                 }];
                 if (feature.get("airport")) {
                     styleJson.push({
-                        text: {
-                            text: "AIRPORT",
-                            "offset-y": 15
+                        "image": {
+                            "imgSize": [
+                                15,
+                                15
+                            ],
+                            "fill": {
+                                "color": "rgba(250,250,250,1)"
+                            },
+                            "stroke": {
+                                "color": "rgba(0,0,0,1)",
+                                "width": 1
+                            },
+                            "path": "M15,6.8182L15,8.5l-6.5-1l-0.3182,4.7727L11,14v1l-3.5-0.6818L4,15v-1l2.8182-1.7273L6.5,7.5L0,8.5V6.8182L6.5,4.5v-3c0,0,0-1.5,1-1.5s1,1.5,1,1.5v2.8182L15,6.8182z"
                         }
                     });
                 }

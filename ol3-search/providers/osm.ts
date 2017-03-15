@@ -1,6 +1,7 @@
 // https://github.com/jonataswalker/ol3-geocoder/blob/master/src/js/providers/osm.js
 import ol = require("openlayers");
 import { mixin } from "ol3-fun/ol3-fun/common";
+import { Result } from "./index";
 
 export module OpenStreet {
 
@@ -42,20 +43,6 @@ export module OpenStreet {
 
     export type Response = ResponseItem[];
 
-}
-
-export interface Result<T> {
-    lon: number;
-    lat: number;
-    address: {
-        name: string;
-        road: string;
-        postcode: string;
-        city: string;
-        state: string;
-        country: string;
-    },
-    original: T
 }
 
 export interface OpenStreetRequest {

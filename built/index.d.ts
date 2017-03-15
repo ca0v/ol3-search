@@ -1,17 +1,36 @@
 declare module "bower_components/ol3-fun/ol3-fun/common" {
+    export function asArray<T extends HTMLInputElement>(list: NodeList): T[];
+    export function toggle(e: HTMLElement, className: string, toggle?: boolean): void;
     export function parse<T>(v: string, type: T): T;
     export function getQueryParameters(options: any, url?: string): void;
     export function getParameterByName(name: string, url?: string): string;
     export function doif<T>(v: T, cb: (v: T) => void): void;
     export function mixin<A extends any, B extends any>(a: A, b: B): A & B;
     export function defaults<A extends any, B extends any>(a: A, ...b: B[]): A & B;
+    /**
+     * Adds exactly one instance of the CSS to the app with a mechanism
+     * for disposing by invoking the destructor returned by this method.
+     * Note the css will not be removed until the dependency count reaches
+     * 0 meaning the number of calls to cssin('id') must match the number
+     * of times the destructor is invoked.
+     * let d1 = cssin('foo', '.foo { background: white }');
+     * let d2 = cssin('foo', '.foo { background: white }');
+     * d1(); // reduce dependency count
+     * d2(); // really remove the css
+     * @param name unique id for this style tag
+     * @param css css content
+     * @returns destructor
+     */
     export function cssin(name: string, css: string): () => void;
-    export function debounce(func: () => void, wait?: number): () => void;
+    export function debounce<T extends Function>(func: T, wait?: number, immediate?: boolean): T;
     /**
      * poor $(html) substitute due to being
      * unable to create <td>, <tr> elements
      */
     export function html(html: string): HTMLElement;
+    export function pair<A, B>(a1: A[], a2: B[]): [A, B][];
+    export function range(n: number): any[];
+    export function shuffle<T>(array: T[]): T[];
 }
 declare module "ol3-search/ol3-search" {
     import ol = require("openlayers");
@@ -77,8 +96,33 @@ declare module "index" {
     import Input = require("ol3-search/ol3-search");
     export = Input;
 }
-declare module "ol3-search/examples/index" {
-    export function run(): void;
+declare module "bower_components/ol3-fun/ol3-fun/navigation" {
+    import ol = require("openlayers");
+    /**
+     * A less disorienting way of changing the maps extent (maybe!)
+     * Zoom out until new feature is visible
+     * Zoom to that feature
+     */
+    export function zoomToFeature(map: ol.Map, feature: ol.Feature, options?: {
+        duration?: number;
+        padding?: number;
+        minResolution?: number;
+    }): void;
+}
+declare module "bower_components/ol3-fun/ol3-fun/parse-dms" {
+    export function parse(dmsString: string): number | {
+        [x: number]: number;
+    };
+}
+declare module "bower_components/ol3-fun/index" {
+    import common = require("bower_components/ol3-fun/ol3-fun/common");
+    import navigation = require("bower_components/ol3-fun/ol3-fun/navigation");
+    import dms = require("bower_components/ol3-fun/ol3-fun/parse-dms");
+    let index: typeof common & {
+        dms: typeof dms;
+        navigation: typeof navigation;
+    };
+    export = index;
 }
 declare module "bower_components/ol3-fun/ol3-fun/snapshot" {
     import ol = require("openlayers");
@@ -93,8 +137,10 @@ declare module "bower_components/ol3-fun/ol3-fun/snapshot" {
 }
 declare module "bower_components/ol3-grid/ol3-grid/ol3-grid" {
     import ol = require("openlayers");
-    export interface IOptions {
+    export interface GridOptions {
+        map?: ol.Map;
         className?: string;
+        position?: string;
         expanded?: boolean;
         hideButton?: boolean;
         autoCollapse?: boolean;
@@ -109,18 +155,27 @@ declare module "bower_components/ol3-grid/ol3-grid/ol3-grid" {
         target?: HTMLElement;
         layers?: ol.layer.Vector[];
         placeholderText?: string;
+        zoomDuration?: number;
+        zoomPadding?: number;
+        zoomMinResolution?: number;
     }
     export class Grid extends ol.control.Control {
-        static create(options?: IOptions): Grid;
+        static DEFAULT_OPTIONS: GridOptions;
+        static create(options: GridOptions): Grid;
         private features;
         private button;
         private grid;
         private options;
-        constructor(options: IOptions);
+        handlers: Array<() => void>;
+        private constructor(options);
+        destroy(): void;
+        setPosition(position: string): void;
+        cssin(): void;
         redraw(): void;
+        private featureMap;
         add(feature: ol.Feature, layer?: ol.layer.Vector): void;
+        remove(feature: ol.Feature, layer: ol.layer.Vector): void;
         clear(): void;
-        setMap(map: ol.Map): void;
         collapse(): void;
         expand(): void;
         on(type: string, cb: Function): ol.Object | ol.Object[];
@@ -154,6 +209,10 @@ declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbol
         type LineDash = number[];
         interface Fill {
             color?: string;
+            gradient?: {
+                type?: string;
+                stops?: string;
+            };
         }
         interface Stroke {
             color?: string;
@@ -282,96 +341,61 @@ declare module "bower_components/ol3-symbolizer/index" {
     import Symbolizer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer");
     export = Symbolizer;
 }
-declare module "ol3-search/providers/osm" {
-    import ol = require("openlayers");
-    export module OpenStreet {
-        interface Address {
-            road: string;
-            state: string;
-            country: string;
-        }
-        interface Address {
-            neighbourhood: string;
-            postcode: string;
-            city: string;
-            town: string;
-        }
-        interface Address {
-            peak: string;
-            county: string;
-            country_code: string;
-            sports_centre: string;
-        }
-        interface ResponseItem {
-            place_id: string;
-            licence: string;
-            osm_type: string;
-            osm_id: string;
-            boundingbox: string[];
-            lat: string;
-            lon: string;
-            display_name: string;
-            class: string;
-            type: string;
-            importance: number;
-            icon: string;
-            address: Address;
-        }
-        type Response = ResponseItem[];
+declare module "ol3-search/providers/google" {
+    import { Result } from "./index";
+    export const GoogleMappingTable: {
+        name: string[];
+        road: string[];
+        postcode: string[];
+        city: string[];
+        state: string[];
+        country: string[];
+    };
+    export interface GoogleAddressComponent {
+        types: Array<string>;
+        long_name: string;
     }
-    export interface Result<T> {
-        lon: number;
-        lat: number;
-        address: {
-            name: string;
-            road: string;
-            postcode: string;
-            city: string;
-            state: string;
-            country: string;
-        };
-        original: T;
-    }
-    export interface OpenStreetRequest {
-        format?: "json";
-        callback?: "define";
-        "accept-language"?: "en-US";
-        q?: string | {
-            street: {
-                housenumber: number;
-                streetname: string;
+    export interface GoogleResponseItem {
+        address_components: Array<GoogleAddressComponent>;
+        geometry: {
+            location: {
+                lat: number;
+                lng: number;
             };
-            city: string;
-            county: string;
-            state: string;
-            country: string;
-            postalcode: string;
         };
-        countrycodes?: string[];
-        viewbox?: {
-            left: number;
-            top: number;
-            right: number;
-            bottom: number;
-        };
-        bounded?: boolean;
-        addressdetails?: boolean;
-        email?: string;
-        exclude_place_ids?: string[];
-        limit?: number;
-        dedupe?: boolean;
-        polygon?: "geojson" | "kml" | "svg" | "wkt";
-        extratags?: boolean;
-        namedetails?: boolean;
+        formatted_address: string;
     }
-    export class OpenStreet {
-        dataType: string;
-        method: string;
-        getParameters(options: OpenStreetRequest, map?: ol.Map): {
-            url: string;
-            params: {} & OpenStreetRequest;
+    export interface GoogleResponse {
+        status: string;
+        results: Array<GoogleResponseItem>;
+    }
+    export interface GoogleOptions {
+        url?: string;
+        params?: {
+            address?: string;
+            key?: string;
+            language?: string;
         };
-        handleResponse(args: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
+    }
+    export type ResultType = Result<GoogleResponseItem>;
+    export class Google {
+        static DEFAULT_OPTIONS: GoogleOptions;
+        private options;
+        constructor(options?: GoogleOptions);
+        getParameters(options: {
+            query?: string;
+            key?: string;
+            lang?: string;
+        }, map?: ol.Map): {
+            url: string;
+            params: {
+                address: string;
+                key: string;
+                language: string;
+            };
+        };
+        handleResponse(response: GoogleResponse): Result<GoogleResponseItem>[];
+        private parseComponents(address_components, result);
     }
 }
 declare module "bower_components/ol3-symbolizer/ol3-symbolizer/common/ajax" {
@@ -904,7 +928,96 @@ declare module "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source" {
         static create(options: IOptions): JQueryDeferred<ol.layer.Vector[]>;
     }
 }
+declare module "ol3-search/examples/google-search" {
+    export function run(): void;
+}
+declare module "ol3-search/examples/index" {
+    export function run(): void;
+}
+declare module "ol3-search/providers/osm" {
+    import ol = require("openlayers");
+    import { Result } from "./index";
+    export module OpenStreet {
+        interface Address {
+            road: string;
+            state: string;
+            country: string;
+        }
+        interface Address {
+            neighbourhood: string;
+            postcode: string;
+            city: string;
+            town: string;
+        }
+        interface Address {
+            peak: string;
+            county: string;
+            country_code: string;
+            sports_centre: string;
+        }
+        interface ResponseItem {
+            place_id: string;
+            licence: string;
+            osm_type: string;
+            osm_id: string;
+            boundingbox: string[];
+            lat: string;
+            lon: string;
+            display_name: string;
+            class: string;
+            type: string;
+            importance: number;
+            icon: string;
+            address: Address;
+        }
+        type Response = ResponseItem[];
+    }
+    export interface OpenStreetRequest {
+        format?: "json";
+        callback?: "define";
+        "accept-language"?: "en-US";
+        q?: string | {
+            street: {
+                housenumber: number;
+                streetname: string;
+            };
+            city: string;
+            county: string;
+            state: string;
+            country: string;
+            postalcode: string;
+        };
+        countrycodes?: string[];
+        viewbox?: {
+            left: number;
+            top: number;
+            right: number;
+            bottom: number;
+        };
+        bounded?: boolean;
+        addressdetails?: boolean;
+        email?: string;
+        exclude_place_ids?: string[];
+        limit?: number;
+        dedupe?: boolean;
+        polygon?: "geojson" | "kml" | "svg" | "wkt";
+        extratags?: boolean;
+        namedetails?: boolean;
+    }
+    export class OpenStreet {
+        dataType: string;
+        method: string;
+        getParameters(options: OpenStreetRequest, map?: ol.Map): {
+            url: string;
+            params: {} & OpenStreetRequest;
+        };
+        handleResponse(args: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
+    }
+}
 declare module "ol3-search/examples/ol3-search" {
+    export function run(): void;
+}
+declare module "ol3-search/examples/osm-search" {
     export function run(): void;
 }
 declare module "ol3-search/tests/index" {

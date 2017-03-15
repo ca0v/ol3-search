@@ -134,6 +134,7 @@ table.ol-grid-table > td {
             map.addLayer(layer);
 
             let grid = Grid.create({
+                map: map,
                 className: "ol-grid statecode top left-2",
                 expanded: true,
                 currentExtent: true,
@@ -143,7 +144,6 @@ table.ol-grid-table > td {
                 showIcon: true,
                 layers: [layer]
             });
-            map.addControl(grid);
 
             grid.on("feature-click", args => {
                 navigation.zoomToFeature(map, args.feature);
@@ -177,7 +177,6 @@ table.ol-grid-table > td {
 
     form.on("change", args => {
         if (!args.value) return;
-        console.log("search", args.value);
 
         let searchArgs = searchProvider.getParameters(args.value, map);
 
@@ -193,9 +192,9 @@ table.ol-grid-table > td {
                 {
                     let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
                     let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                    feature.set("text", r.address);
+                    feature.set("text", r.original.formatted_address);
                     source.addFeature(feature);
-                    navigation.zoomToFeature(map, feature);
+                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
             });

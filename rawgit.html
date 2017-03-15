@@ -32,19 +32,20 @@
             }
 
             let debug = getParameterByName("debug") === "1";
+            let localhost = window.location.hostname === "localhost";
 
             require.config({
 
                 packages: [
                     {
                         name: 'openlayers',
-                        location: 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1',
+                        location: localhost ? "./bower_components/openlayers" : 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1',
                         main: debug ? 'ol-debug' : 'ol'
                     },
                     {
                         name: 'jquery',
-                        location: 'https://code.jquery.com',
-                        main: debug ? 'jquery-3.1.0' : 'jquery-3.1.0.min'
+                        location: localhost ? "./bower_components/jquery/dist" : 'https://cdn.rawgit.com/jquery/jquery-dist/3.1.1/dist',
+                        main: debug ? 'jquery' : 'jquery.min'
                     }
                 ],
 

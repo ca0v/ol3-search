@@ -4,6 +4,7 @@ export function run() {
     let labs = `
     index
     google-search
+    osm-search
     ol3-search
     `;
 

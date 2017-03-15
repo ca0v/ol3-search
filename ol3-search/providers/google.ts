@@ -1,6 +1,7 @@
 import { defaults } from "ol3-fun";
+import { Result } from "./index";
 
-const types = {
+export const GoogleMappingTable = {
     name: [
         'point_of_interest',
         'establishment',
@@ -19,6 +20,29 @@ const types = {
     country: ['country']
 };
 
+const GoogleMappingKeys = <Array<keyof typeof GoogleMappingTable>>Object.keys(GoogleMappingTable);
+
+export interface GoogleAddressComponent {
+    types: Array<string>;
+    long_name: string;
+}
+
+export interface GoogleResponseItem {
+    address_components: Array<GoogleAddressComponent>;
+    geometry: {
+        location: {
+            lat: number;
+            lng: number;
+        }
+    };
+    formatted_address: string;
+}
+
+export interface GoogleResponse {
+    status: string;
+    results: Array<GoogleResponseItem>
+}
+
 export interface GoogleOptions {
     url?: string;
     params?: {
@@ -27,6 +51,8 @@ export interface GoogleOptions {
         language?: string;
     }
 }
+
+export type ResultType = Result<GoogleResponseItem>;
 
 export class Google {
 
@@ -45,7 +71,7 @@ export class Google {
         this.options = defaults(options || {}, Google.DEFAULT_OPTIONS);
     }
 
-    getParameters(options: {
+    public getParameters(options: {
         query?: string;
         key?: string;
         lang?: string;
@@ -60,54 +86,34 @@ export class Google {
         };
     }
 
-    handleResponse(results: Array<{
-        address_components: Array<{
-            types: Array<any>;
-            long_name: string;
-        }>;
-        geometry: {
-            location: {
-                lat: number;
-                lng: number;
-            }
-        };
-        formatted_address: string;
-    }>) {
-        /*
-         * @param {Array} details - address_components
-         */
-        const getDetails = (details: Array<{
-            types: Array<any>;
-            long_name: string;
-        }>) => {
-            let parts = <keyof typeof types>{};
-            let typeKeys = <Array<keyof typeof types>>Object.keys(types);
+    public handleResponse(response: GoogleResponse) {
 
-            details.forEach(detail => {
-                typeKeys.forEach(typeKey => {
-                    parts[typeKey] = [];
-                    detail.types.forEach(t => {
-                        if (0 <= types[typeKey].indexOf(t)) parts[typeKey].push(detail.long_name);
-                    });
-                })
-            });
-            return parts;
-        };
+        console.assert(response.status === "OK", "status OK");
 
-        return results
-            .map(result => {
-                let details = getDetails(result.address_components);
-                return {
-                    empty: Object.keys(details).every(k => !details[k].length),
-                    lon: result.geometry.location.lng,
-                    lat: result.geometry.location.lat,
-                    address: details,
-                    original: {
-                        formatted: result.formatted_address,
-                        details: result.address_components
-                    }
-                };
-            })
-            .filter(result => !result.empty);
+        return response.results.map(result => {
+            let returnValue = <ResultType>{
+                lat: result.geometry.location.lat,
+                lon: result.geometry.location.lng,
+                address: {},
+                original: result
+            };
+            this.parseComponents(result.address_components, returnValue);
+            return returnValue;
+        });
+
     }
+
+    private parseComponents(address_components: Array<GoogleAddressComponent>, result: ResultType) {
+        address_components.forEach(addressComponent => {
+            addressComponent.types.forEach(googleType => {
+                GoogleMappingKeys.forEach(typeKey => {
+                    if (-1 < GoogleMappingTable[typeKey].indexOf(googleType)) {
+                        result.address[typeKey] = addressComponent.long_name;
+                    }
+                });
+            });
+        });
+    }
+
+
 }

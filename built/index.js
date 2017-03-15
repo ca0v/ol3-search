@@ -2382,10 +2382,10 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
     }
     exports.run = run;
 });
-define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_2, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_5, ags_source_2) {
+define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_5) {
     "use strict";
     function run() {
-        ol3_fun_5.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        ol3_fun_5.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
         var searchProvider = new osm_2.OpenStreet();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
@@ -2429,54 +2429,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
                 return style;
             }
         });
-        ags_source_2.ArcGisVectorSourceFactory.create({
-            map: map,
-            services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
-            serviceName: 'USA_States_Generalized',
-            layers: [0]
-        }).then(function (layers) {
-            layers.forEach(function (layer) {
-                layer.setStyle(function (feature, resolution) {
-                    var style = feature.getStyle();
-                    if (!style) {
-                        style = symbolizer.fromJson({
-                            fill: {
-                                color: "rgba(200,200,200,0.5)"
-                            },
-                            stroke: {
-                                color: "rgba(33,33,33,0.8)",
-                                width: 3
-                            },
-                            text: {
-                                text: feature.get("STATE_ABBR")
-                            }
-                        });
-                        feature.setStyle(style);
-                    }
-                    return style;
-                });
-                map.addLayer(layer);
-                var grid = ol3_grid_2.Grid.create({
-                    map: map,
-                    className: "ol-grid statecode top left-2",
-                    expanded: true,
-                    currentExtent: true,
-                    autoCollapse: true,
-                    // we do it ourselves
-                    autoPan: false,
-                    showIcon: true,
-                    layers: [layer]
-                });
-                grid.on("feature-click", function (args) {
-                    ol3_fun_5.navigation.zoomToFeature(map, args.feature);
-                });
-                grid.on("feature-hover", function (args) {
-                    // TODO: highlight args.feature
-                });
-            });
-        }).then(function () {
-            map.addLayer(vector);
-        });
+        map.addLayer(vector);
         var form = ol3_search_3.SearchForm.create({
             className: 'ol-search top right',
             expanded: true,

@@ -6,51 +6,16 @@ import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
 import { OpenStreet } from "../providers/osm";
 import { cssin, mixin, navigation } from "ol3-fun";
-import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
 export function run() {
 
-    cssin("examples/ol3-search", `
-
-.ol-grid.statecode .ol-grid-container {
-    background-color: white;
-    width: 10em;
-}
-
-.ol-grid .ol-grid-container.ol-hidden {
-}
-
-.ol-grid .ol-grid-container {
-    width: 15em;
-}
-
-.ol-grid-table {
-    width: 100%;
-}
-
-table.ol-grid-table {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-table.ol-grid-table > td {
-    padding: 8px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.ol-search tr.focus {
-    background: white;
-}
-
-.ol-search:hover {
-    background: white;
-}
-
+    cssin("examples/osm-search", `
 .ol-search label.ol-search-label {
     white-space: nowrap;
 }
-
+.ol-search form {
+    max-width: 12em;
+}
     `);
 
     let searchProvider = new OpenStreet();
@@ -103,60 +68,8 @@ table.ol-grid-table > td {
         }
     });
 
-    ArcGisVectorSourceFactory.create({
-        map: map,
-        services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
-        serviceName: 'USA_States_Generalized',
-        layers: [0]
-    }).then(layers => {
-        layers.forEach(layer => {
 
-            layer.setStyle((feature: ol.Feature, resolution) => {
-                let style = <ol.style.Style>feature.getStyle();
-                if (!style) {
-                    style = symbolizer.fromJson({
-                        fill: {
-                            color: "rgba(200,200,200,0.5)"
-                        },
-                        stroke: {
-                            color: "rgba(33,33,33,0.8)",
-                            width: 3
-                        },
-                        text: {
-                            text: feature.get("STATE_ABBR")
-                        }
-                    });
-                    feature.setStyle(style);
-                }
-                return style;
-            });
-
-            map.addLayer(layer);
-
-            let grid = Grid.create({
-                map: map,
-                className: "ol-grid statecode top left-2",
-                expanded: true,
-                currentExtent: true,
-                autoCollapse: true,
-                // we do it ourselves
-                autoPan: false,
-                showIcon: true,
-                layers: [layer]
-            });
-
-            grid.on("feature-click", args => {
-                navigation.zoomToFeature(map, args.feature);
-            });
-
-            grid.on("feature-hover", args => {
-                // TODO: highlight args.feature
-            });
-
-        });
-    }).then(() => {
-        map.addLayer(vector);
-    });
+    map.addLayer(vector);
 
     let form = SearchForm.create({
         className: 'ol-search top right',

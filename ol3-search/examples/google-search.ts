@@ -48,7 +48,7 @@ export function run() {
         target: mapContainer,
         layers: [
             new ol.layer.Tile({
-                source: new ol.source.OSM({ opaque: true }),
+                source: new ol.source.OSM(),
                 visible: true
             })
         ],
@@ -115,7 +115,7 @@ export function run() {
         title: "Google Search Form",
         fields: [
             {
-                name: "query",
+                name: "address",
                 alias: "Location",
                 default: "LAX",
                 length: 50
@@ -128,20 +128,26 @@ export function run() {
         ]
     });
 
-    form.on("change", args => {
+    form.on("change", (args: {
+        value: GoogleGeocode.Request & {
+            bounded: boolean
+        }
+    }) => {
         if (!args.value) return;
 
-        let searchArgs = searchProvider.getParameters(args.value, map);
+        let searchArgs = searchProvider.getParameters({
+            bounded: args.value.bounded,
+            params: args.value
+        }, map);
 
         $.ajax({
             url: searchArgs.url,
-            method: 'GET',
+            method: searchArgs.method || 'GET',
             data: searchArgs.params,
-            dataType: 'json'
+            dataType: searchArgs.dataType || 'json'
         }).then(json => {
             let results = searchProvider.handleResponse(json);
             results.some(r => {
-                console.log(r);
                 if (r.address) {
                     let geom = new ol.geom.Point([r.lon, r.lat]).transform("EPSG:4326", map.getView().getProjection());
                     let feature = new ol.Feature(geom);
@@ -149,15 +155,9 @@ export function run() {
                     r.original.types.forEach(t => feature.set(t, true));
                     source.addFeature(feature);
                 }
-                if (r.original.geometry.viewport) {
-                    let v = r.original.geometry.viewport;
-                    let geom = new ol.geom.Polygon([[
-                        [v.southwest.lng, v.southwest.lat],
-                        [v.northeast.lng, v.northeast.lat]
-                    ]]).transform("EPSG:4326", map.getView().getProjection());
-
-                    let feature = new ol.Feature(geom);
-                    //source.addFeature(feature);
+                if (r.extent) {
+                    r.extent.transform("EPSG:4326", map.getView().getProjection());
+                    let feature = new ol.Feature(r.extent);
                     navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;

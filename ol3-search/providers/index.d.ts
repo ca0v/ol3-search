@@ -1,7 +1,9 @@
 // to be shared across providers
 export interface Result<T> {
+    title: string;
     lon: number;
     lat: number;
+    extent: ol.geom.Polygon;
     address: {
         name: string;
         road: string;
@@ -13,3 +15,13 @@ export interface Result<T> {
     original: T
 }
 
+export interface Request<T> {
+    url?: string;
+    method?: string;
+    dataType?: string;
+    query?: string;
+    key?: string;
+    lang?: string;
+    bounded?: boolean;
+    params: T
+}

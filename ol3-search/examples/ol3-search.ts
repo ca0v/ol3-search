@@ -214,13 +214,15 @@ table.ol-grid-table > td {
         if (!args.value) return;
         console.log("search", args.value);
 
-        let searchArgs = searchProvider.getParameters(args.value, map);
+        let searchArgs = searchProvider.getParameters({
+            params: args.value
+        }, map);
 
         $.ajax({
             url: searchArgs.url,
-            method: searchProvider.method || 'GET',
+            method: searchArgs.method || 'GET',
             data: searchArgs.params,
-            dataType: searchProvider.dataType || 'json'
+            dataType: searchArgs.dataType || 'json'
         }).then(json => {
             let results = searchProvider.handleResponse(json);
             results.some(r => {

@@ -346,57 +346,9 @@ declare module "bower_components/ol3-symbolizer/index" {
 }
 declare module "ol3-search/providers/google" {
     import ol = require("openlayers");
-    import { Result } from "./index";
-    export const GoogleMappingTable: {
-        name: string[];
-        road: string[];
-        postcode: string[];
-        city: string[];
-        state: string[];
-        country: string[];
-    };
-    export interface GoogleAddressComponent {
-        types: Array<string>;
-        long_name: string;
-    }
-    export interface GoogleRequest {
-        address?: string;
-        components?: string;
-        key?: string;
-        bounds?: string;
-        language?: string;
-        region?: string;
-    }
-    export interface GoogleResponseItem {
-        address_components: Array<GoogleAddressComponent>;
-        geometry: {
-            location: {
-                lat: number;
-                lng: number;
-            };
-            location_type: string;
-            viewport: {
-                northeast: {
-                    lat: number;
-                    lng: number;
-                };
-                southwest: {
-                    lat: number;
-                    lng: number;
-                };
-            };
-        };
-        formatted_address: string;
-        place_id: string;
-        types: string[];
-    }
-    export interface GoogleResponse {
-        status: string;
-        results: Array<GoogleResponseItem>;
-    }
-    export interface GoogleGeocodeOptions {
-        url?: string;
-        params?: {
+    import { Request, Result } from "./index";
+    export module GoogleGeocode {
+        interface Request {
             address?: string;
             key?: string;
             language?: string;
@@ -405,23 +357,51 @@ declare module "ol3-search/providers/google" {
             administrative_area?: string;
             postal_code?: string;
             country?: string;
-        };
+            components?: string;
+            bounds?: string;
+            region?: string;
+        }
+        interface AddressComponent {
+            types: Array<string>;
+            long_name: string;
+        }
+        interface ResponseItem {
+            address_components: Array<AddressComponent>;
+            geometry: {
+                location: {
+                    lat: number;
+                    lng: number;
+                };
+                location_type: string;
+                viewport: {
+                    northeast: {
+                        lat: number;
+                        lng: number;
+                    };
+                    southwest: {
+                        lat: number;
+                        lng: number;
+                    };
+                };
+            };
+            formatted_address: string;
+            place_id: string;
+            types: string[];
+        }
+        interface Response {
+            status: string;
+            results: Array<ResponseItem>;
+        }
+        type ResultType = Result<ResponseItem>;
     }
-    export type ResultType = Result<GoogleResponseItem>;
+    export interface GoogleGeocodeOptions extends Request<GoogleGeocode.Request> {
+    }
     export class GoogleGeocode {
         static DEFAULT_OPTIONS: GoogleGeocodeOptions;
         private options;
         constructor(options?: GoogleGeocodeOptions);
-        getParameters(options: {
-            query?: string;
-            key?: string;
-            lang?: string;
-            bounded?: boolean;
-        }, map?: ol.Map): {
-            url: string;
-            params: GoogleRequest;
-        };
-        handleResponse(response: GoogleResponse): Result<GoogleResponseItem>[];
+        getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map): Request<GoogleGeocode.Request>;
+        handleResponse(response: GoogleGeocode.Response): Result<GoogleGeocode.ResponseItem>[];
         private parseComponents(address_components, result);
     }
 }
@@ -963,8 +943,40 @@ declare module "ol3-search/examples/index" {
 }
 declare module "ol3-search/providers/osm" {
     import ol = require("openlayers");
-    import { Result } from "./index";
+    import { Request, Result } from "./index";
     export module OpenStreet {
+        interface Request {
+            format?: "json";
+            callback?: "define";
+            "accept-language"?: "en-US";
+            q?: string | {
+                street?: {
+                    housenumber?: number;
+                    streetname?: string;
+                };
+                city?: string;
+                county?: string;
+                state?: string;
+                country?: string;
+                postalcode?: string;
+            };
+            countrycodes?: string[];
+            viewbox?: {
+                left: number;
+                top: number;
+                right: number;
+                bottom: number;
+            };
+            bounded?: boolean;
+            addressdetails?: boolean;
+            email?: string;
+            exclude_place_ids?: string[];
+            limit?: number;
+            dedupe?: boolean;
+            polygon?: "geojson" | "kml" | "svg" | "wkt";
+            extratags?: boolean;
+            namedetails?: boolean;
+        }
         interface Address {
             road: string;
             state: string;
@@ -999,46 +1011,14 @@ declare module "ol3-search/providers/osm" {
         }
         type Response = ResponseItem[];
     }
-    export interface OpenStreetRequest {
-        format?: "json";
-        callback?: "define";
-        "accept-language"?: "en-US";
-        q?: string | {
-            street: {
-                housenumber: number;
-                streetname: string;
-            };
-            city: string;
-            county: string;
-            state: string;
-            country: string;
-            postalcode: string;
-        };
-        countrycodes?: string[];
-        viewbox?: {
-            left: number;
-            top: number;
-            right: number;
-            bottom: number;
-        };
-        bounded?: boolean;
-        addressdetails?: boolean;
-        email?: string;
-        exclude_place_ids?: string[];
-        limit?: number;
-        dedupe?: boolean;
-        polygon?: "geojson" | "kml" | "svg" | "wkt";
-        extratags?: boolean;
-        namedetails?: boolean;
+    export interface GeocodeOptions extends Request<OpenStreet.Request> {
     }
     export class OpenStreet {
-        dataType: string;
-        method: string;
-        getParameters(options: OpenStreetRequest, map?: ol.Map): {
-            url: string;
-            params: {} & OpenStreetRequest;
-        };
-        handleResponse(args: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
+        static DEFAULT_OPTIONS: GeocodeOptions;
+        private options;
+        constructor(options?: GeocodeOptions);
+        getParameters(options: Request<OpenStreet.Request>, map?: ol.Map): Request<OpenStreet.Request>;
+        handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
     }
 }
 declare module "ol3-search/examples/ol3-search" {

@@ -67,8 +67,6 @@ export function run() {
             return <ol.style.Style>style;
         }
     });
-
-
     map.addLayer(vector);
 
     let form = SearchForm.create({
@@ -78,89 +76,53 @@ export function run() {
         fields: [
             {
                 name: "q",
-                alias: "*"
-            },
-            {
-                name: "postalcode",
-                alias: "Postal Code"
-            },
-            {
-                name: "housenumber",
-                alias: "House Number",
-                length: 10,
-                type: "integer"
-            },
-            {
-                name: "streetname",
-                alias: "Street Name"
-            },
-            {
-                name: "city",
-                alias: "City"
-            },
-            {
-                name: "county",
-                alias: "County"
-            },
-            {
-                name: "country",
-                alias: "Country",
-                domain: {
-                    type: "",
-                    name: "",
-                    codedValues: [
-                        {
-                            name: "us", code: "us"
-                        }
-                    ]
-                }
+                alias: "*",
+                default: "LAX",
+                length: 50
             },
             {
                 name: "bounded",
                 alias: "Current Extent?",
-                type: "boolean"
+                type: "boolean",
+                default: true
             }
         ]
     });
 
-    form.on("change", args => {
+    form.on("change", (args: {
+        value: {
+            q: string;
+            bounded: boolean;
+        }
+    }) => {
         if (!args.value) return;
-        console.log("search", args.value);
 
-        let searchArgs = searchProvider.getParameters(args.value, map);
+        let v = args.value;
+        let searchArgs = searchProvider.getParameters({
+            bounded: v.bounded,
+            params: {
+                q: v.q
+            }
+        }, map);
 
         $.ajax({
             url: searchArgs.url,
-            method: searchProvider.method || 'GET',
+            method: searchArgs.method || 'GET',
             data: searchArgs.params,
-            dataType: searchProvider.dataType || 'json'
+            dataType: searchArgs.dataType || 'json'
         }).then(json => {
             let results = searchProvider.handleResponse(json);
             results.some(r => {
-                console.log(r);
-                if (r.original.boundingbox) {
-                    let [lat1, lat2, lon1, lon2] = r.original.boundingbox.map(v => parseFloat(v));
-                    [lon1, lat1] = ol.proj.transform([lon1, lat1], "EPSG:4326", "EPSG:3857");
-                    [lon2, lat2] = ol.proj.transform([lon2, lat2], "EPSG:4326", "EPSG:3857");
-                    let extent = <ol.Extent>[lon1, lat1, lon2, lat2];
-
-                    let feature = new ol.Feature(new ol.geom.Polygon([[
-                        ol.extent.getBottomLeft(extent),
-                        ol.extent.getTopLeft(extent),
-                        ol.extent.getTopRight(extent),
-                        ol.extent.getBottomRight(extent),
-                        ol.extent.getBottomLeft(extent)
-                    ]]));
-
-                    feature.set("text", r.original.display_name);
-                    source.addFeature(feature);
-                    navigation.zoomToFeature(map, feature);
-                } else {
+                if (r.address) {
                     let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
                     let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                     feature.set("text", r.original.display_name);
                     source.addFeature(feature);
-                    navigation.zoomToFeature(map, feature);
+                }
+                if (r.extent) {
+                    r.extent.transform("EPSG:4326", map.getView().getProjection());
+                    let feature = new ol.Feature(r.extent);
+                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
             });

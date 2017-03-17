@@ -5,6 +5,7 @@ import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
 import { OpenStreet } from "../providers/osm";
+import { GoogleGeocode } from "../providers/google";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -53,6 +54,7 @@ table.ol-grid-table > td {
 
     `);
 
+    //let searchProvider = new GoogleGeocode();
     let searchProvider = new OpenStreet();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
@@ -64,7 +66,8 @@ table.ol-grid-table > td {
         target: mapContainer,
         layers: [
             new ol.layer.Tile({
-                source: new ol.source.OSM()
+                source: new ol.source.OSM(),
+                opacity: 0.8
             })
         ],
         view: new ol.View({
@@ -131,11 +134,12 @@ table.ol-grid-table > td {
                 return style;
             });
 
-            map.addLayer(layer);
+            map.getLayers().insertAt(0, layer);
 
             let grid = Grid.create({
                 map: map,
-                className: "ol-grid statecode top left-2",
+                className: "ol-grid",
+                position: "statecode top left-2",
                 expanded: true,
                 currentExtent: true,
                 autoCollapse: true,
@@ -158,57 +162,28 @@ table.ol-grid-table > td {
         map.addLayer(vector);
     });
 
+    let searchFields = searchProvider.fields.concat([
+        {
+            name: "bounded",
+            alias: "Current Extent?",
+            default: true
+        }
+    ]);
+
+    searchFields[0].default = "LAX";
+
     let form = SearchForm.create({
-        className: 'ol-search top right',
+        className: 'ol-search',
+        position: 'top right',
         expanded: true,
-        title: "Nominatim Search Form",
-        fields: [
-            {
-                name: "q",
-                alias: "*"
-            },
-            {
-                name: "postalcode",
-                alias: "Postal Code"
-            },
-            {
-                name: "housenumber",
-                alias: "House Number",
-                length: 10,
-                type: "integer"
-            },
-            {
-                name: "streetname",
-                alias: "Street Name"
-            },
-            {
-                name: "city",
-                alias: "City"
-            },
-            {
-                name: "county",
-                alias: "County"
-            },
-            {
-                name: "country",
-                alias: "Country",
-                domain: {
-                    type: "",
-                    name: "",
-                    codedValues: [
-                        {
-                            name: "us", code: "us"
-                        }
-                    ]
-                }
-            },
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                type: "boolean"
-            }
-        ]
+        title: "Search",
+        showLabels: false,
+        autoClear: true,
+        autoCollapse: true,
+        canCollapse: true,
+        fields: searchFields
     });
+
 
     form.on("change", args => {
         if (!args.value) return;
@@ -227,27 +202,16 @@ table.ol-grid-table > td {
             let results = searchProvider.handleResponse(json);
             results.some(r => {
                 console.log(r);
-                if (r.original.boundingbox) {
-                    let [lat1, lat2, lon1, lon2] = r.original.boundingbox.map(v => parseFloat(v));
-                    [lon1, lat1] = ol.proj.transform([lon1, lat1], "EPSG:4326", "EPSG:3857");
-                    [lon2, lat2] = ol.proj.transform([lon2, lat2], "EPSG:4326", "EPSG:3857");
-                    let extent = <ol.Extent>[lon1, lat1, lon2, lat2];
+                if (r.extent) {
+                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
 
-                    let feature = new ol.Feature(new ol.geom.Polygon([[
-                        ol.extent.getBottomLeft(extent),
-                        ol.extent.getTopLeft(extent),
-                        ol.extent.getTopRight(extent),
-                        ol.extent.getBottomRight(extent),
-                        ol.extent.getBottomLeft(extent)
-                    ]]));
-
-                    feature.set("text", r.original.display_name);
+                    feature.set("text", r.title);
                     source.addFeature(feature);
                     navigation.zoomToFeature(map, feature);
                 } else {
                     let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
                     let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                    feature.set("text", r.original.display_name);
+                    feature.set("text", r.title);
                     source.addFeature(feature);
                     navigation.zoomToFeature(map, feature);
                 }

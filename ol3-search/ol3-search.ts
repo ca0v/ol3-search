@@ -1,95 +1,6 @@
 import ol = require("openlayers");
-import { html, cssin, mixin, debounce } from "ol3-fun/ol3-fun/common";
-
-const css = (I => `
-    .${I.name} {
-        position:absolute;
-    }
-    .${I.name}.top {
-        top: 0.5em;
-    }
-    .${I.name}.top-1 {
-        top: 1.5em;
-    }
-    .${I.name}.top-2 {
-        top: 2.5em;
-    }
-    .${I.name}.top-3 {
-        top: 3.5em;
-    }
-    .${I.name}.top-4 {
-        top: 4.5em;
-    }
-    .${I.name}.left {
-        left: 0.5em;
-    }
-    .${I.name}.left-1 {
-        left: 1.5em;
-    }
-    .${I.name}.left-2 {
-        left: 2.5em;
-    }
-    .${I.name}.left-3 {
-        left: 3.5em;
-    }
-    .${I.name}.left-4 {
-        left: 4.5em;
-    }
-    .${I.name}.bottom {
-        bottom: 0.5em;
-    }
-    .${I.name}.bottom-1 {
-        bottom: 1.5em;
-    }
-    .${I.name}.bottom-2 {
-        bottom: 2.5em;
-    }
-    .${I.name}.bottom-3 {
-        bottom: 3.5em;
-    }
-    .${I.name}.bottom-4 {
-        bottom: 4.5em;
-    }
-    .${I.name}.right {
-        right: 0.5em;
-    }
-    .${I.name}.right-1 {
-        right: 1.5em;
-    }
-    .${I.name}.right-2 {
-        right: 2.5em;
-    }
-    .${I.name}.right-3 {
-        right: 3.5em;
-    }
-    .${I.name}.right-4 {
-        right: 4.5em;
-    }
-    .${I.name} button {
-        min-height: 1.375em;
-        min-width: 1.375em;
-        width: auto;
-        display: inline;
-    }
-    .${I.name}.left button {
-        float:right;
-    }
-    .${I.name}.right button {
-        float:left;
-    }
-    .${I.name} form {
-        width: 16em;
-        border: none;
-        padding: 0;
-        margin: 0;
-        margin-left: 2px;
-        margin-top: 2px;
-        vertical-align: top;
-    }
-    .${I.name} form.ol-hidden {
-        display: none;
-    }
-`)({ name: 'ol-search' });
+import { html, cssin, debounce, mixin, pair, range } from "ol3-fun";
+import { SearchField } from "./providers";
 
 let olcss = {
     CLASS_CONTROL: 'ol-control',
@@ -98,9 +9,10 @@ let olcss = {
     CLASS_HIDDEN: 'ol-hidden'
 };
 
-export interface IOptions {
+export interface IOptions extends olx.control.ControlOptions {
     // what css class name to assign to the main element
     className?: string;
+    position?: string;
     expanded?: boolean;
     hideButton?: boolean;
     autoChange?: boolean;
@@ -114,25 +26,7 @@ export interface IOptions {
     target?: HTMLElement;
     // what to show on the tooltip
     title?: string;
-    fields?: {
-        name: string;
-        type?: "string" | "integer" | "number" | "boolean";
-        default?: string | number | boolean;
-        placeholder?: string;
-        alias?: string;
-        regex?: RegExp;
-        domain?: {
-            type: string;
-            name: string;
-            codedValues: {
-                name: string;
-                code: string;
-            }[];
-        };
-        editable?: boolean;
-        nullable?: boolean;
-        length?: number;
-    }[];
+    fields?: SearchField[];
 }
 
 const expando = {
@@ -141,7 +35,8 @@ const expando = {
 };
 
 const defaults: IOptions = {
-    className: 'ol-search bottom left',
+    className: 'ol-search',
+    position: 'bottom left',
     expanded: false,
     autoChange: false,
     autoClear: false,
@@ -158,8 +53,6 @@ export class SearchForm extends ol.control.Control {
 
     static create(options?: IOptions): SearchForm {
 
-        cssin('ol-search', css);
-
         // provide computed defaults        
         options = mixin({
             openedText: options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
@@ -170,7 +63,7 @@ export class SearchForm extends ol.control.Control {
         options = mixin(mixin({}, defaults), options);
 
         let element = document.createElement('div');
-        element.className = `${options.className} ${olcss.CLASS_UNSELECTABLE} ${olcss.CLASS_CONTROL}`;
+        element.className = `${options.className} ${options.position} ${olcss.CLASS_UNSELECTABLE} ${olcss.CLASS_CONTROL}`;
 
         let geocoderOptions = mixin({
             element: element,
@@ -184,6 +77,7 @@ export class SearchForm extends ol.control.Control {
     button: HTMLButtonElement;
     form: HTMLFormElement;
     options: IOptions;
+    public handlers: Array<() => void>;
 
     constructor(options: IOptions & {
         element: HTMLElement;
@@ -202,6 +96,8 @@ export class SearchForm extends ol.control.Control {
         });
 
         this.options = options;
+        this.handlers = [];
+        this.cssin();
 
         let button = this.button = document.createElement('button');
         button.setAttribute('type', 'button');
@@ -298,6 +194,14 @@ export class SearchForm extends ol.control.Control {
                     type: "change",
                     value: this.value
                 });
+                if (this.options.autoCollapse && this.options.canCollapse) {
+                    this.collapse();
+                }
+                if (this.options.autoClear) {
+                    this.options.fields.forEach(f => {
+                        form[f.name].value = f.default === undefined ? "" : f.default;
+                    });
+                }
             });
 
         }
@@ -326,18 +230,73 @@ export class SearchForm extends ol.control.Control {
         options.expanded ? this.expand(options) : this.collapse(options);
     }
 
-    collapse(options: IOptions) {
+    destroy() {
+        this.handlers.forEach(h => h());
+        this.setTarget(null);
+    }
+
+    setPosition(position: string) {
+        this.options.position.split(' ')
+            .forEach(k => this.options.element.classList.remove(k));
+
+        position.split(' ')
+            .forEach(k => this.options.element.classList.add(k));
+
+        this.options.position = position;
+    }
+
+    cssin() {
+        let className = this.options.className;
+        let positions = pair("top left right bottom".split(" "), range(24))
+            .map(pos => `.${className}.${pos[0] + (-pos[1] || '')} { ${pos[0]}:${0.5 + pos[1]}em; }`);
+
+        this.handlers.push(cssin(className, `
+.${className} {
+    position: absolute;
+}
+
+.${className} button {
+    min-height: 1.375em;
+    min-width: 1.375em;
+    width: auto;
+    display: inline;
+}
+
+.${className}.left button {
+    float:right;
+}
+
+.${className}.right button {
+    float:left;
+}
+
+.${className} form {
+    width: 16em;
+    border: none;
+    padding: 0;
+    margin: 0;
+    margin-left: 2px;
+    margin-top: 2px;
+    vertical-align: top;
+}
+.${className} form.ol-hidden {
+    display: none;
+}
+${positions.join('\n')}`));
+    }
+
+    collapse(options = this.options) {
         if (!options.canCollapse) return;
         options.expanded = false;
-        this.form.classList.toggle(olcss.CLASS_HIDDEN, true);
-        this.button.classList.toggle(olcss.CLASS_HIDDEN, false);
+        this.form.classList.add(olcss.CLASS_HIDDEN);
+        this.button.classList.remove(olcss.CLASS_HIDDEN);
         this.button.innerHTML = options.closedText;
     }
 
-    expand(options: IOptions) {
+    expand(options = this.options) {
         options.expanded = true;
-        this.form.classList.toggle(olcss.CLASS_HIDDEN, false);
-        this.button.classList.toggle(olcss.CLASS_HIDDEN, true);
+        this.form.classList.remove(olcss.CLASS_HIDDEN);
+        this.button.classList.add(olcss.CLASS_HIDDEN);
         this.button.innerHTML = options.openedText;
         this.form.focus();
     }
@@ -379,4 +338,5 @@ export class SearchForm extends ol.control.Control {
         });
         return result;
     }
+
 }

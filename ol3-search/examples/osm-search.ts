@@ -70,7 +70,8 @@ export function run() {
     map.addLayer(vector);
 
     let form = SearchForm.create({
-        className: 'ol-search top right',
+        className: 'ol-search',
+        position: 'top right',
         expanded: true,
         title: "Nominatim Search Form",
         fields: [

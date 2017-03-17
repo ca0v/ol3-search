@@ -84,22 +84,34 @@ export function run() {
                     }
                 }];
                 if (feature.get("airport")) {
-                    styleJson.push({
-                        "image": {
-                            "imgSize": [
-                                15,
-                                15
-                            ],
-                            "fill": {
-                                "color": "rgba(250,250,250,1)"
-                            },
-                            "stroke": {
-                                "color": "rgba(0,0,0,1)",
-                                "width": 1
-                            },
-                            "path": "M15,6.8182L15,8.5l-6.5-1l-0.3182,4.7727L11,14v1l-3.5-0.6818L4,15v-1l2.8182-1.7273L6.5,7.5L0,8.5V6.8182L6.5,4.5v-3c0,0,0-1.5,1-1.5s1,1.5,1,1.5v2.8182L15,6.8182z"
+                    styleJson.push(
+                        {
+                            "svg": {
+                                "scale": 2,
+                                "imgSize": [
+                                    15,
+                                    15
+                                ],
+                                "rotation": 0, "anchorOrigin": "top-left",
+                                "anchor": [
+                                    15,
+                                    15
+                                ],
+                                "offset": [
+                                    0,
+                                    0
+                                ],
+                                "fill": {
+                                    "color": "rgba(250,25,250,1)"
+                                },
+                                "stroke": {
+                                    "color": "rgba(0,0,0,1)",
+                                    "width": 1
+                                },
+                                "path": "M15,6.8182L15,8.5l-6.5-1l-0.3182,4.7727L11,14v1l-3.5-0.6818L4,15v-1l2.8182-1.7273L6.5,7.5L0,8.5V6.8182L6.5,4.5v-3c0,0,0-1.5,1-1.5s1,1.5,1,1.5v2.8182L15,6.8182z"
+                            }
                         }
-                    });
+                    );
                 }
                 style = styleJson.map(s => symbolizer.fromJson(s));
                 feature.setStyle(style);
@@ -110,7 +122,8 @@ export function run() {
     map.addLayer(vector);
 
     let form = SearchForm.create({
-        className: 'ol-search top right',
+        className: 'ol-search',
+        position: 'top right',
         expanded: true,
         title: "Google Search Form",
         fields: [

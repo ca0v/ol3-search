@@ -187,215 +187,7 @@ define("bower_components/ol3-fun/ol3-fun/common", ["require", "exports"], functi
     }
     exports.shuffle = shuffle;
 });
-define("ol3-search/ol3-search", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_1) {
-    "use strict";
-    var css = (function (I) { return "\n    ." + I.name + " {\n        position:absolute;\n    }\n    ." + I.name + ".top {\n        top: 0.5em;\n    }\n    ." + I.name + ".top-1 {\n        top: 1.5em;\n    }\n    ." + I.name + ".top-2 {\n        top: 2.5em;\n    }\n    ." + I.name + ".top-3 {\n        top: 3.5em;\n    }\n    ." + I.name + ".top-4 {\n        top: 4.5em;\n    }\n    ." + I.name + ".left {\n        left: 0.5em;\n    }\n    ." + I.name + ".left-1 {\n        left: 1.5em;\n    }\n    ." + I.name + ".left-2 {\n        left: 2.5em;\n    }\n    ." + I.name + ".left-3 {\n        left: 3.5em;\n    }\n    ." + I.name + ".left-4 {\n        left: 4.5em;\n    }\n    ." + I.name + ".bottom {\n        bottom: 0.5em;\n    }\n    ." + I.name + ".bottom-1 {\n        bottom: 1.5em;\n    }\n    ." + I.name + ".bottom-2 {\n        bottom: 2.5em;\n    }\n    ." + I.name + ".bottom-3 {\n        bottom: 3.5em;\n    }\n    ." + I.name + ".bottom-4 {\n        bottom: 4.5em;\n    }\n    ." + I.name + ".right {\n        right: 0.5em;\n    }\n    ." + I.name + ".right-1 {\n        right: 1.5em;\n    }\n    ." + I.name + ".right-2 {\n        right: 2.5em;\n    }\n    ." + I.name + ".right-3 {\n        right: 3.5em;\n    }\n    ." + I.name + ".right-4 {\n        right: 4.5em;\n    }\n    ." + I.name + " button {\n        min-height: 1.375em;\n        min-width: 1.375em;\n        width: auto;\n        display: inline;\n    }\n    ." + I.name + ".left button {\n        float:right;\n    }\n    ." + I.name + ".right button {\n        float:left;\n    }\n    ." + I.name + " form {\n        width: 16em;\n        border: none;\n        padding: 0;\n        margin: 0;\n        margin-left: 2px;\n        margin-top: 2px;\n        vertical-align: top;\n    }\n    ." + I.name + " form.ol-hidden {\n        display: none;\n    }\n"; })({ name: 'ol-search' });
-    var olcss = {
-        CLASS_CONTROL: 'ol-control',
-        CLASS_UNSELECTABLE: 'ol-unselectable',
-        CLASS_UNSUPPORTED: 'ol-unsupported',
-        CLASS_HIDDEN: 'ol-hidden'
-    };
-    var expando = {
-        right: '»',
-        left: '«'
-    };
-    var defaults = {
-        className: 'ol-search bottom left',
-        expanded: false,
-        autoChange: false,
-        autoClear: false,
-        autoCollapse: true,
-        canCollapse: true,
-        hideButton: false,
-        closedText: expando.right,
-        openedText: expando.left,
-        title: 'Search',
-        showLabels: false,
-    };
-    var SearchForm = (function (_super) {
-        __extends(SearchForm, _super);
-        function SearchForm(options) {
-            var _this = this;
-            if (options.hideButton) {
-                options.canCollapse = false;
-                options.autoCollapse = false;
-                options.expanded = true;
-            }
-            _this = _super.call(this, {
-                element: options.element,
-                target: options.target
-            }) || this;
-            _this.options = options;
-            var button = _this.button = document.createElement('button');
-            button.setAttribute('type', 'button');
-            button.title = options.title;
-            options.element.appendChild(button);
-            if (options.hideButton) {
-                button.style.display = "none";
-            }
-            var form = _this.form = common_1.html(("\n        <form>\n            " + (options.title ? "<label class=\"title\">" + options.title + "</label>" : "") + "\n            <section class=\"header\"></section>\n            <section class=\"body\">\n            <table class=\"fields\">\n            " + (options.showLabels ? "<thead><tr><td>Field</td><td>Value</td></tr></thead>" : "") + "\n                <tbody>\n                    <tr><td>Field</td><td>Value</td></tr>\n                </tbody>\n            </table>\n            </section>\n            <section class=\"footer\"></section>\n        </form>\n        ").trim());
-            options.element.appendChild(form);
-            {
-                var body_1 = form.getElementsByTagName("tbody")[0];
-                body_1.innerHTML = "";
-                options.fields.forEach(function (field) {
-                    field.alias = field.alias || field.name;
-                    field.name = field.name || field.alias;
-                    var tr = document.createElement("tr");
-                    var value = document.createElement("td");
-                    if (!field.type && typeof field.default !== "undefined") {
-                        field.type = typeof field.default;
-                    }
-                    field.type = field.type || "string";
-                    if (options.showLabels) {
-                        var label = document.createElement("td");
-                        label.innerHTML = "<label for=\"" + field.name + "\" class=\"ol-search-label\">" + field.alias + "</label>";
-                        tr.appendChild(label);
-                    }
-                    tr.appendChild(value);
-                    var input;
-                    switch (field.type) {
-                        case "boolean":
-                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"checkbox\" " + (field.default ? "checked" : "") + " />");
-                            break;
-                        case "integer":
-                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" step=\"1\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
-                            break;
-                        case "number":
-                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" max=\"" + Array(field.length || 3).join("9") + "\" />");
-                            break;
-                        case "string":
-                        default:
-                            input = common_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"text\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
-                            input.maxLength = field.length || 20;
-                            break;
-                    }
-                    input.title = field.alias;
-                    input.placeholder = field.placeholder || field.alias;
-                    input.addEventListener("focus", function () { return tr.classList.add("focus"); });
-                    input.addEventListener("blur", function () { return tr.classList.remove("focus"); });
-                    value.appendChild(input);
-                    body_1.appendChild(tr);
-                });
-            }
-            {
-                var footer = form.getElementsByClassName("footer")[0];
-                var searchButton_1 = common_1.html("<input type=\"button\" class=\"ol-search-button\" value=\"Search\"/>");
-                footer.appendChild(searchButton_1);
-                form.addEventListener("keydown", function (args) {
-                    if (args.key === "Enter") {
-                        if (args.srcElement !== searchButton_1) {
-                            searchButton_1.focus();
-                        }
-                        else {
-                            options.autoCollapse && button.focus();
-                        }
-                    }
-                });
-                searchButton_1.addEventListener("click", function () {
-                    _this.dispatchEvent({
-                        type: "change",
-                        value: _this.value
-                    });
-                });
-            }
-            button.addEventListener("click", function () {
-                options.expanded ? _this.collapse(options) : _this.expand(options);
-            });
-            if (options.autoCollapse) {
-                form.addEventListener("blur", function () {
-                    _this.collapse(options);
-                });
-            }
-            if (options.autoChange) {
-                form.addEventListener("keypress", common_1.debounce(function () {
-                    _this.dispatchEvent({
-                        type: "change",
-                        value: _this.value
-                    });
-                }, 500));
-            }
-            options.expanded ? _this.expand(options) : _this.collapse(options);
-            return _this;
-        }
-        SearchForm.create = function (options) {
-            common_1.cssin('ol-search', css);
-            // provide computed defaults        
-            options = common_1.mixin({
-                openedText: options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
-                closedText: options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
-            }, options || {});
-            // provide static defaults        
-            options = common_1.mixin(common_1.mixin({}, defaults), options);
-            var element = document.createElement('div');
-            element.className = options.className + " " + olcss.CLASS_UNSELECTABLE + " " + olcss.CLASS_CONTROL;
-            var geocoderOptions = common_1.mixin({
-                element: element,
-                target: options.target,
-                expanded: false
-            }, options);
-            return new SearchForm(geocoderOptions);
-        };
-        SearchForm.prototype.collapse = function (options) {
-            if (!options.canCollapse)
-                return;
-            options.expanded = false;
-            this.form.classList.toggle(olcss.CLASS_HIDDEN, true);
-            this.button.classList.toggle(olcss.CLASS_HIDDEN, false);
-            this.button.innerHTML = options.closedText;
-        };
-        SearchForm.prototype.expand = function (options) {
-            options.expanded = true;
-            this.form.classList.toggle(olcss.CLASS_HIDDEN, false);
-            this.button.classList.toggle(olcss.CLASS_HIDDEN, true);
-            this.button.innerHTML = options.openedText;
-            this.form.focus();
-        };
-        SearchForm.prototype.on = function (type, cb) {
-            _super.prototype.on.call(this, type, cb);
-        };
-        Object.defineProperty(SearchForm.prototype, "value", {
-            get: function () {
-                var _this = this;
-                var result = {};
-                this.options.fields.forEach(function (field) {
-                    var input = _this.form.querySelector("[name=\"" + field.name + "\"]");
-                    var value = input.value;
-                    switch (field.type) {
-                        case "integer":
-                            value = parseInt(value, 10);
-                            value = isNaN(value) ? null : value;
-                            break;
-                        case "number":
-                            value = parseFloat(value);
-                            value = isNaN(value) ? null : value;
-                            break;
-                        case "boolean":
-                            value = input.checked;
-                            break;
-                        case "string":
-                            value = value || null;
-                            break;
-                    }
-                    if (undefined !== value && null !== value) {
-                        result[input.name] = value;
-                    }
-                });
-                return result;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return SearchForm;
-    }(ol.control.Control));
-    exports.SearchForm = SearchForm;
-});
-define("index", ["require", "exports", "ol3-search/ol3-search"], function (require, exports, Input) {
-    "use strict";
-    return Input;
-});
-define("bower_components/ol3-fun/ol3-fun/navigation", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_2) {
+define("bower_components/ol3-fun/ol3-fun/navigation", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_1) {
     "use strict";
     /**
      * A less disorienting way of changing the maps extent (maybe!)
@@ -403,7 +195,7 @@ define("bower_components/ol3-fun/ol3-fun/navigation", ["require", "exports", "op
      * Zoom to that feature
      */
     function zoomToFeature(map, feature, options) {
-        options = common_2.defaults(options || {}, {
+        options = common_1.defaults(options || {}, {
             duration: 1000,
             padding: 256,
             minResolution: 2 * map.getView().getMinResolution()
@@ -540,6 +332,243 @@ define("bower_components/ol3-fun/index", ["require", "exports", "bower_component
     });
     return index;
 });
+define("ol3-search/ol3-search", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_1) {
+    "use strict";
+    var olcss = {
+        CLASS_CONTROL: 'ol-control',
+        CLASS_UNSELECTABLE: 'ol-unselectable',
+        CLASS_UNSUPPORTED: 'ol-unsupported',
+        CLASS_HIDDEN: 'ol-hidden'
+    };
+    var expando = {
+        right: '»',
+        left: '«'
+    };
+    var defaults = {
+        className: 'ol-search',
+        position: 'bottom left',
+        expanded: false,
+        autoChange: false,
+        autoClear: false,
+        autoCollapse: true,
+        canCollapse: true,
+        hideButton: false,
+        closedText: expando.right,
+        openedText: expando.left,
+        title: 'Search',
+        showLabels: false,
+    };
+    var SearchForm = (function (_super) {
+        __extends(SearchForm, _super);
+        function SearchForm(options) {
+            var _this = this;
+            if (options.hideButton) {
+                options.canCollapse = false;
+                options.autoCollapse = false;
+                options.expanded = true;
+            }
+            _this = _super.call(this, {
+                element: options.element,
+                target: options.target
+            }) || this;
+            _this.options = options;
+            _this.handlers = [];
+            _this.cssin();
+            var button = _this.button = document.createElement('button');
+            button.setAttribute('type', 'button');
+            button.title = options.title;
+            options.element.appendChild(button);
+            if (options.hideButton) {
+                button.style.display = "none";
+            }
+            var form = _this.form = ol3_fun_1.html(("\n        <form>\n            " + (options.title ? "<label class=\"title\">" + options.title + "</label>" : "") + "\n            <section class=\"header\"></section>\n            <section class=\"body\">\n            <table class=\"fields\">\n            " + (options.showLabels ? "<thead><tr><td>Field</td><td>Value</td></tr></thead>" : "") + "\n                <tbody>\n                    <tr><td>Field</td><td>Value</td></tr>\n                </tbody>\n            </table>\n            </section>\n            <section class=\"footer\"></section>\n        </form>\n        ").trim());
+            options.element.appendChild(form);
+            {
+                var body_1 = form.getElementsByTagName("tbody")[0];
+                body_1.innerHTML = "";
+                options.fields.forEach(function (field) {
+                    field.alias = field.alias || field.name;
+                    field.name = field.name || field.alias;
+                    var tr = document.createElement("tr");
+                    var value = document.createElement("td");
+                    if (!field.type && typeof field.default !== "undefined") {
+                        field.type = typeof field.default;
+                    }
+                    field.type = field.type || "string";
+                    if (options.showLabels) {
+                        var label = document.createElement("td");
+                        label.innerHTML = "<label for=\"" + field.name + "\" class=\"ol-search-label\">" + field.alias + "</label>";
+                        tr.appendChild(label);
+                    }
+                    tr.appendChild(value);
+                    var input;
+                    switch (field.type) {
+                        case "boolean":
+                            input = ol3_fun_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"checkbox\" " + (field.default ? "checked" : "") + " />");
+                            break;
+                        case "integer":
+                            input = ol3_fun_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" step=\"1\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
+                            break;
+                        case "number":
+                            input = ol3_fun_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"number\" min=\"0\" max=\"" + Array(field.length || 3).join("9") + "\" />");
+                            break;
+                        case "string":
+                        default:
+                            input = ol3_fun_1.html("<input class=\"input " + field.name + "\" name=\"" + field.name + "\" type=\"text\" " + (field.default ? "value=\"" + field.default + "\"" : "") + " />");
+                            input.maxLength = field.length || 20;
+                            break;
+                    }
+                    input.title = field.alias;
+                    input.placeholder = field.placeholder || field.alias;
+                    input.addEventListener("focus", function () { return tr.classList.add("focus"); });
+                    input.addEventListener("blur", function () { return tr.classList.remove("focus"); });
+                    value.appendChild(input);
+                    body_1.appendChild(tr);
+                });
+            }
+            {
+                var footer = form.getElementsByClassName("footer")[0];
+                var searchButton_1 = ol3_fun_1.html("<input type=\"button\" class=\"ol-search-button\" value=\"Search\"/>");
+                footer.appendChild(searchButton_1);
+                form.addEventListener("keydown", function (args) {
+                    if (args.key === "Enter") {
+                        if (args.srcElement !== searchButton_1) {
+                            searchButton_1.focus();
+                        }
+                        else {
+                            options.autoCollapse && button.focus();
+                        }
+                    }
+                });
+                searchButton_1.addEventListener("click", function () {
+                    _this.dispatchEvent({
+                        type: "change",
+                        value: _this.value
+                    });
+                    if (_this.options.autoCollapse && _this.options.canCollapse) {
+                        _this.collapse();
+                    }
+                    if (_this.options.autoClear) {
+                        _this.options.fields.forEach(function (f) {
+                            form[f.name].value = f.default === undefined ? "" : f.default;
+                        });
+                    }
+                });
+            }
+            button.addEventListener("click", function () {
+                options.expanded ? _this.collapse(options) : _this.expand(options);
+            });
+            if (options.autoCollapse) {
+                form.addEventListener("blur", function () {
+                    _this.collapse(options);
+                });
+            }
+            if (options.autoChange) {
+                form.addEventListener("keypress", ol3_fun_1.debounce(function () {
+                    _this.dispatchEvent({
+                        type: "change",
+                        value: _this.value
+                    });
+                }, 500));
+            }
+            options.expanded ? _this.expand(options) : _this.collapse(options);
+            return _this;
+        }
+        SearchForm.create = function (options) {
+            // provide computed defaults        
+            options = ol3_fun_1.mixin({
+                openedText: options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
+                closedText: options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
+            }, options || {});
+            // provide static defaults        
+            options = ol3_fun_1.mixin(ol3_fun_1.mixin({}, defaults), options);
+            var element = document.createElement('div');
+            element.className = options.className + " " + options.position + " " + olcss.CLASS_UNSELECTABLE + " " + olcss.CLASS_CONTROL;
+            var geocoderOptions = ol3_fun_1.mixin({
+                element: element,
+                target: options.target,
+                expanded: false
+            }, options);
+            return new SearchForm(geocoderOptions);
+        };
+        SearchForm.prototype.destroy = function () {
+            this.handlers.forEach(function (h) { return h(); });
+            this.setTarget(null);
+        };
+        SearchForm.prototype.setPosition = function (position) {
+            var _this = this;
+            this.options.position.split(' ')
+                .forEach(function (k) { return _this.options.element.classList.remove(k); });
+            position.split(' ')
+                .forEach(function (k) { return _this.options.element.classList.add(k); });
+            this.options.position = position;
+        };
+        SearchForm.prototype.cssin = function () {
+            var className = this.options.className;
+            var positions = ol3_fun_1.pair("top left right bottom".split(" "), ol3_fun_1.range(24))
+                .map(function (pos) { return "." + className + "." + (pos[0] + (-pos[1] || '')) + " { " + pos[0] + ":" + (0.5 + pos[1]) + "em; }"; });
+            this.handlers.push(ol3_fun_1.cssin(className, "\n." + className + " {\n    position: absolute;\n}\n\n." + className + " button {\n    min-height: 1.375em;\n    min-width: 1.375em;\n    width: auto;\n    display: inline;\n}\n\n." + className + ".left button {\n    float:right;\n}\n\n." + className + ".right button {\n    float:left;\n}\n\n." + className + " form {\n    width: 16em;\n    border: none;\n    padding: 0;\n    margin: 0;\n    margin-left: 2px;\n    margin-top: 2px;\n    vertical-align: top;\n}\n." + className + " form.ol-hidden {\n    display: none;\n}\n" + positions.join('\n')));
+        };
+        SearchForm.prototype.collapse = function (options) {
+            if (options === void 0) { options = this.options; }
+            if (!options.canCollapse)
+                return;
+            options.expanded = false;
+            this.form.classList.add(olcss.CLASS_HIDDEN);
+            this.button.classList.remove(olcss.CLASS_HIDDEN);
+            this.button.innerHTML = options.closedText;
+        };
+        SearchForm.prototype.expand = function (options) {
+            if (options === void 0) { options = this.options; }
+            options.expanded = true;
+            this.form.classList.remove(olcss.CLASS_HIDDEN);
+            this.button.classList.add(olcss.CLASS_HIDDEN);
+            this.button.innerHTML = options.openedText;
+            this.form.focus();
+        };
+        SearchForm.prototype.on = function (type, cb) {
+            _super.prototype.on.call(this, type, cb);
+        };
+        Object.defineProperty(SearchForm.prototype, "value", {
+            get: function () {
+                var _this = this;
+                var result = {};
+                this.options.fields.forEach(function (field) {
+                    var input = _this.form.querySelector("[name=\"" + field.name + "\"]");
+                    var value = input.value;
+                    switch (field.type) {
+                        case "integer":
+                            value = parseInt(value, 10);
+                            value = isNaN(value) ? null : value;
+                            break;
+                        case "number":
+                            value = parseFloat(value);
+                            value = isNaN(value) ? null : value;
+                            break;
+                        case "boolean":
+                            value = input.checked;
+                            break;
+                        case "string":
+                            value = value || null;
+                            break;
+                    }
+                    if (undefined !== value && null !== value) {
+                        result[input.name] = value;
+                    }
+                });
+                return result;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return SearchForm;
+    }(ol.control.Control));
+    exports.SearchForm = SearchForm;
+});
+define("index", ["require", "exports", "ol3-search/ol3-search"], function (require, exports, Input) {
+    "use strict";
+    return Input;
+});
 define("bower_components/ol3-fun/ol3-fun/snapshot", ["require", "exports", "openlayers"], function (require, exports, ol) {
     "use strict";
     function getStyle(feature) {
@@ -593,7 +622,7 @@ define("bower_components/ol3-fun/ol3-fun/snapshot", ["require", "exports", "open
     }());
     return Snapshot;
 });
-define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "openlayers", "bower_components/ol3-fun/index", "bower_components/ol3-fun/ol3-fun/snapshot", "bower_components/ol3-fun/ol3-fun/navigation"], function (require, exports, ol, ol3_fun_1, Snapshot, navigation_1) {
+define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "openlayers", "bower_components/ol3-fun/index", "bower_components/ol3-fun/ol3-fun/snapshot", "bower_components/ol3-fun/ol3-fun/navigation"], function (require, exports, ol, ol3_fun_2, Snapshot, navigation_1) {
     "use strict";
     var grid_html = "\n<div class='ol-grid-container'>\n    <table class='ol-grid-table'>\n        <tbody><tr><td/></tr></tbody>\n    </table>\n</div>\n";
     var olcss = {
@@ -631,7 +660,7 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
             if (options.hideButton) {
                 button.style.display = "none";
             }
-            var grid = ol3_fun_1.html(grid_html.trim());
+            var grid = ol3_fun_2.html(grid_html.trim());
             _this.grid = grid.getElementsByClassName("ol-grid-table")[0];
             options.element.appendChild(grid);
             if (_this.options.autoCollapse) {
@@ -650,9 +679,9 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
             });
             options.expanded ? _this.expand() : _this.collapse();
             // render
-            _this.features.on(["addfeature", "addfeatures"], ol3_fun_1.debounce(function () { return _this.redraw(); }));
+            _this.features.on(["addfeature", "addfeatures"], ol3_fun_2.debounce(function () { return _this.redraw(); }));
             if (_this.options.currentExtent) {
-                _this.options.map.getView().on(["change:center", "change:resolution"], ol3_fun_1.debounce(function () { return _this.redraw(); }));
+                _this.options.map.getView().on(["change:center", "change:resolution"], ol3_fun_2.debounce(function () { return _this.redraw(); }));
             }
             if (_this.options.layers) {
                 _this.options.layers.forEach(function (l) {
@@ -669,13 +698,13 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
         }
         Grid.create = function (options) {
             // provide computed and static defaults
-            options = ol3_fun_1.defaults(ol3_fun_1.mixin({
+            options = ol3_fun_2.defaults(ol3_fun_2.mixin({
                 openedText: options.position && -1 < options.position.indexOf("left") ? expando.left : expando.right,
                 closedText: options.position && -1 < options.position.indexOf("left") ? expando.right : expando.left,
             }, options), Grid.DEFAULT_OPTIONS);
             var element = document.createElement('div');
             element.className = options.className + " " + options.position + " " + olcss.CLASS_UNSELECTABLE + " " + olcss.CLASS_CONTROL;
-            var gridOptions = ol3_fun_1.mixin({
+            var gridOptions = ol3_fun_2.mixin({
                 map: options.map,
                 element: element,
                 expanded: false
@@ -701,9 +730,9 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
         };
         Grid.prototype.cssin = function () {
             var className = this.options.className;
-            var positions = ol3_fun_1.pair("top left right bottom".split(" "), ol3_fun_1.range(24))
+            var positions = ol3_fun_2.pair("top left right bottom".split(" "), ol3_fun_2.range(24))
                 .map(function (pos) { return "." + className + "." + (pos[0] + (-pos[1] || '')) + " { " + pos[0] + ":" + (0.5 + pos[1]) + "em; }"; });
-            this.handlers.push(ol3_fun_1.cssin(className, "\n." + className + " ." + className + "-container {\n    max-height: 16em;\n    overflow-y: auto;\n}\n." + className + " ." + className + "-container.ol-hidden {\n    display: none;\n}\n." + className + " .feature-row {\n    cursor: pointer;\n}\n." + className + " .feature-row:hover {\n    background: black;\n    color: white;\n}\n." + className + " .feature-row:focus {\n    background: #ccc;\n    color: black;\n}\n" + positions.join('\n') + "\n"));
+            this.handlers.push(ol3_fun_2.cssin(className, "\n." + className + " ." + className + "-container {\n    max-height: 16em;\n    overflow-y: auto;\n}\n." + className + " ." + className + "-container.ol-hidden {\n    display: none;\n}\n." + className + " .feature-row {\n    cursor: pointer;\n}\n." + className + " .feature-row:hover {\n    background: black;\n    color: white;\n}\n." + className + " .feature-row:focus {\n    background: #ccc;\n    color: black;\n}\n" + positions.join('\n') + "\n"));
         };
         Grid.prototype.redraw = function () {
             var _this = this;
@@ -735,7 +764,7 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
                 }
                 if (_this.options.labelAttributeName) {
                     var td = document.createElement("td");
-                    var label = ol3_fun_1.html("<label class=\"label\">" + feature.get(_this.options.labelAttributeName) + "</label>");
+                    var label = ol3_fun_2.html("<label class=\"label\">" + feature.get(_this.options.labelAttributeName) + "</label>");
                     td.appendChild(label);
                     tr.appendChild(td);
                 }
@@ -771,7 +800,7 @@ define("bower_components/ol3-grid/ol3-grid/ol3-grid", ["require", "exports", "op
                 feature = originalFeature_1.clone();
                 feature.setStyle(style);
                 // how to keep geometry in sync?
-                originalFeature_1.on("change", ol3_fun_1.debounce(function () {
+                originalFeature_1.on("change", ol3_fun_2.debounce(function () {
                     feature.setGeometry(originalFeature_1.getGeometry());
                     _this.redraw();
                 }));
@@ -1292,7 +1321,7 @@ define("bower_components/ol3-symbolizer/index", ["require", "exports", "bower_co
     "use strict";
     return Symbolizer;
 });
-define("ol3-search/providers/google", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_2) {
+define("ol3-search/providers/google", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_3) {
     "use strict";
     var GoogleMappingTable = {
         name: [
@@ -1315,8 +1344,19 @@ define("ol3-search/providers/google", ["require", "exports", "openlayers", "bowe
     var GoogleMappingKeys = Object.keys(GoogleMappingTable);
     var GoogleGeocode = (function () {
         function GoogleGeocode(options) {
-            this.options = ol3_fun_2.defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
+            this.options = ol3_fun_3.defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
         }
+        Object.defineProperty(GoogleGeocode.prototype, "fields", {
+            get: function () {
+                return [{
+                        name: "address",
+                        alias: "Location",
+                        length: 50
+                    }];
+            },
+            enumerable: true,
+            configurable: true
+        });
         GoogleGeocode.prototype.getParameters = function (options, map) {
             options.url = options.url || this.options.url;
             options.params.address = options.query || options.params.address || this.options.params.address;
@@ -1879,7 +1919,7 @@ define("bower_components/ol3-symbolizer/ol3-symbolizer/common/common", ["require
  * It will make use the map SRS and the resulttype="tile" and exceededTransferLimit
  * See https://github.com/ca0v/ol3-lab/issues/4
  */
-define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-catalog", "bower_components/ol3-symbolizer/ol3-symbolizer/format/ags-symbolizer", "bower_components/ol3-symbolizer/ol3-symbolizer/common/common"], function (require, exports, $, ol, AgsCatalog, Symbolizer, common_3) {
+define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-catalog", "bower_components/ol3-symbolizer/ol3-symbolizer/format/ags-symbolizer", "bower_components/ol3-symbolizer/ol3-symbolizer/common/common"], function (require, exports, $, ol, AgsCatalog, Symbolizer, common_2) {
     "use strict";
     var esrijsonFormat = new ol.format.EsriJSON();
     function asParam(options) {
@@ -1898,7 +1938,7 @@ define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["requir
         }
         ArcGisVectorSourceFactory.create = function (options) {
             var d = $.Deferred();
-            options = common_3.defaults(options, DEFAULT_OPTIONS);
+            options = common_2.defaults(options, DEFAULT_OPTIONS);
             var srs = options.map.getView()
                 .getProjection()
                 .getCode()
@@ -1988,10 +2028,10 @@ define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["requir
     }());
     exports.ArcGisVectorSourceFactory = ArcGisVectorSourceFactory;
 });
-define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_1, ol3_search_1, google_1, ol3_fun_3) {
+define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_1, ol3_search_1, google_1, ol3_fun_4) {
     "use strict";
     function run() {
-        ol3_fun_3.cssin("examples/googl-search", "\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n.ol-search table {\n    width: 100%;\n}\n\n.ol-search .input {\n    width: 100%;\n}\n\n.ol-search input[type=\"checkbox\"] {\n    width: auto;\n}\n    ");
+        ol3_fun_4.cssin("examples/googl-search", "\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n.ol-search table {\n    width: 100%;\n}\n\n.ol-search .input {\n    width: 100%;\n}\n\n.ol-search input[type=\"checkbox\"] {\n    width: auto;\n}\n    ");
         var searchProvider = new google_1.GoogleGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
@@ -2034,13 +2074,23 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
                         }];
                     if (feature.get("airport")) {
                         styleJson.push({
-                            "image": {
+                            "svg": {
+                                "scale": 2,
                                 "imgSize": [
                                     15,
                                     15
                                 ],
+                                "rotation": 0, "anchorOrigin": "top-left",
+                                "anchor": [
+                                    15,
+                                    15
+                                ],
+                                "offset": [
+                                    0,
+                                    0
+                                ],
                                 "fill": {
-                                    "color": "rgba(250,250,250,1)"
+                                    "color": "rgba(250,25,250,1)"
                                 },
                                 "stroke": {
                                     "color": "rgba(0,0,0,1)",
@@ -2058,7 +2108,8 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
         });
         map.addLayer(vector);
         var form = ol3_search_1.SearchForm.create({
-            className: 'ol-search top right',
+            className: 'ol-search',
+            position: 'top right',
             expanded: true,
             title: "Google Search Form",
             fields: [
@@ -2100,7 +2151,7 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
                     if (r.extent) {
                         r.extent.transform("EPSG:4326", map.getView().getProjection());
                         var feature = new ol.Feature(r.extent);
-                        ol3_fun_3.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        ol3_fun_4.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });
@@ -2133,15 +2184,61 @@ define("ol3-search/examples/index", ["require", "exports"], function (require, e
     exports.run = run;
     ;
 });
-define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_4) {
+define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_3) {
     "use strict";
     var OpenStreet = (function () {
         function OpenStreet(options) {
-            this.options = common_4.defaults(options || {}, OpenStreet.DEFAULT_OPTIONS);
+            this.options = common_3.defaults(options || {}, OpenStreet.DEFAULT_OPTIONS);
         }
+        Object.defineProperty(OpenStreet.prototype, "fields", {
+            get: function () {
+                return [{
+                        name: "q",
+                        alias: "*"
+                    },
+                    {
+                        name: "postalcode",
+                        alias: "Postal Code"
+                    },
+                    {
+                        name: "housenumber",
+                        alias: "House Number",
+                        length: 10,
+                        type: "integer"
+                    },
+                    {
+                        name: "streetname",
+                        alias: "Street Name"
+                    },
+                    {
+                        name: "city",
+                        alias: "City"
+                    },
+                    {
+                        name: "county",
+                        alias: "County"
+                    },
+                    {
+                        name: "country",
+                        alias: "Country",
+                        domain: {
+                            type: "",
+                            name: "",
+                            codedValues: [
+                                {
+                                    name: "us", code: "us"
+                                }
+                            ]
+                        }
+                    },
+                ];
+            },
+            enumerable: true,
+            configurable: true
+        });
         OpenStreet.prototype.getParameters = function (options, map) {
-            common_4.defaults(options, this.options);
-            common_4.defaults(options.params, this.options.params);
+            common_3.defaults(options, this.options);
+            common_3.defaults(options.params, this.options.params);
             if (!options.params.viewbox && map) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
@@ -2214,10 +2311,11 @@ define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_c
     };
     exports.OpenStreet = OpenStreet;
 });
-define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_1, ol3_symbolizer_2, ol3_search_2, osm_1, ol3_fun_4, ags_source_1) {
+define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_1, ol3_symbolizer_2, ol3_search_2, osm_1, ol3_fun_5, ags_source_1) {
     "use strict";
     function run() {
-        ol3_fun_4.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        ol3_fun_5.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        //let searchProvider = new GoogleGeocode();
         var searchProvider = new osm_1.OpenStreet();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
@@ -2226,7 +2324,8 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
             target: mapContainer,
             layers: [
                 new ol.layer.Tile({
-                    source: new ol.source.OSM()
+                    source: new ol.source.OSM(),
+                    opacity: 0.8
                 })
             ],
             view: new ol.View({
@@ -2287,10 +2386,11 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                     }
                     return style;
                 });
-                map.addLayer(layer);
+                map.getLayers().insertAt(0, layer);
                 var grid = ol3_grid_1.Grid.create({
                     map: map,
-                    className: "ol-grid statecode top left-2",
+                    className: "ol-grid",
+                    position: "statecode top left-2",
                     expanded: true,
                     currentExtent: true,
                     autoCollapse: true,
@@ -2300,7 +2400,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                     layers: [layer]
                 });
                 grid.on("feature-click", function (args) {
-                    ol3_fun_4.navigation.zoomToFeature(map, args.feature);
+                    ol3_fun_5.navigation.zoomToFeature(map, args.feature);
                 });
                 grid.on("feature-hover", function (args) {
                     // TODO: highlight args.feature
@@ -2309,56 +2409,24 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
         }).then(function () {
             map.addLayer(vector);
         });
+        var searchFields = searchProvider.fields.concat([
+            {
+                name: "bounded",
+                alias: "Current Extent?",
+                default: true
+            }
+        ]);
+        searchFields[0].default = "LAX";
         var form = ol3_search_2.SearchForm.create({
-            className: 'ol-search top right',
+            className: 'ol-search',
+            position: 'top right',
             expanded: true,
-            title: "Nominatim Search Form",
-            fields: [
-                {
-                    name: "q",
-                    alias: "*"
-                },
-                {
-                    name: "postalcode",
-                    alias: "Postal Code"
-                },
-                {
-                    name: "housenumber",
-                    alias: "House Number",
-                    length: 10,
-                    type: "integer"
-                },
-                {
-                    name: "streetname",
-                    alias: "Street Name"
-                },
-                {
-                    name: "city",
-                    alias: "City"
-                },
-                {
-                    name: "county",
-                    alias: "County"
-                },
-                {
-                    name: "country",
-                    alias: "Country",
-                    domain: {
-                        type: "",
-                        name: "",
-                        codedValues: [
-                            {
-                                name: "us", code: "us"
-                            }
-                        ]
-                    }
-                },
-                {
-                    name: "bounded",
-                    alias: "Current Extent?",
-                    type: "boolean"
-                }
-            ]
+            title: "Search",
+            showLabels: false,
+            autoClear: true,
+            autoCollapse: true,
+            canCollapse: true,
+            fields: searchFields
         });
         form.on("change", function (args) {
             if (!args.value)
@@ -2376,31 +2444,20 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
                 var results = searchProvider.handleResponse(json);
                 results.some(function (r) {
                     console.log(r);
-                    if (r.original.boundingbox) {
-                        var _a = r.original.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
-                        _b = ol.proj.transform([lon1, lat1], "EPSG:4326", "EPSG:3857"), lon1 = _b[0], lat1 = _b[1];
-                        _c = ol.proj.transform([lon2, lat2], "EPSG:4326", "EPSG:3857"), lon2 = _c[0], lat2 = _c[1];
-                        var extent = [lon1, lat1, lon2, lat2];
-                        var feature = new ol.Feature(new ol.geom.Polygon([[
-                                ol.extent.getBottomLeft(extent),
-                                ol.extent.getTopLeft(extent),
-                                ol.extent.getTopRight(extent),
-                                ol.extent.getBottomRight(extent),
-                                ol.extent.getBottomLeft(extent)
-                            ]]));
-                        feature.set("text", r.original.display_name);
+                    if (r.extent) {
+                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
+                        feature.set("text", r.title);
                         source.addFeature(feature);
-                        ol3_fun_4.navigation.zoomToFeature(map, feature);
+                        ol3_fun_5.navigation.zoomToFeature(map, feature);
                     }
                     else {
-                        var _d = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _d[0], lat = _d[1];
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
                         var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                        feature.set("text", r.original.display_name);
+                        feature.set("text", r.title);
                         source.addFeature(feature);
-                        ol3_fun_4.navigation.zoomToFeature(map, feature);
+                        ol3_fun_5.navigation.zoomToFeature(map, feature);
                     }
                     return true;
-                    var _b, _c;
                 });
             }).fail(function () {
                 console.error("geocoder failed");
@@ -2410,10 +2467,10 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
     }
     exports.run = run;
 });
-define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_5) {
+define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_3, ol3_search_3, osm_2, ol3_fun_6) {
     "use strict";
     function run() {
-        ol3_fun_5.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
+        ol3_fun_6.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
         var searchProvider = new osm_2.OpenStreet();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
@@ -2459,7 +2516,8 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
         });
         map.addLayer(vector);
         var form = ol3_search_3.SearchForm.create({
-            className: 'ol-search top right',
+            className: 'ol-search',
+            position: 'top right',
             expanded: true,
             title: "Nominatim Search Form",
             fields: [
@@ -2504,7 +2562,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "j
                     if (r.extent) {
                         r.extent.transform("EPSG:4326", map.getView().getProjection());
                         var feature = new ol.Feature(r.extent);
-                        ol3_fun_5.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        ol3_fun_6.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });

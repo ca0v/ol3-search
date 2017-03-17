@@ -32,73 +32,6 @@ declare module "bower_components/ol3-fun/ol3-fun/common" {
     export function range(n: number): any[];
     export function shuffle<T>(array: T[]): T[];
 }
-declare module "ol3-search/ol3-search" {
-    import ol = require("openlayers");
-    export interface IOptions {
-        className?: string;
-        expanded?: boolean;
-        hideButton?: boolean;
-        autoChange?: boolean;
-        autoClear?: boolean;
-        autoCollapse?: boolean;
-        canCollapse?: boolean;
-        closedText?: string;
-        showLabels?: boolean;
-        openedText?: string;
-        source?: HTMLElement;
-        target?: HTMLElement;
-        title?: string;
-        fields?: {
-            name: string;
-            type?: "string" | "integer" | "number" | "boolean";
-            default?: string | number | boolean;
-            placeholder?: string;
-            alias?: string;
-            regex?: RegExp;
-            domain?: {
-                type: string;
-                name: string;
-                codedValues: {
-                    name: string;
-                    code: string;
-                }[];
-            };
-            editable?: boolean;
-            nullable?: boolean;
-            length?: number;
-        }[];
-    }
-    export class SearchForm extends ol.control.Control {
-        static create(options?: IOptions): SearchForm;
-        button: HTMLButtonElement;
-        form: HTMLFormElement;
-        options: IOptions;
-        constructor(options: IOptions & {
-            element: HTMLElement;
-            target: HTMLElement;
-        });
-        collapse(options: IOptions): void;
-        expand(options: IOptions): void;
-        on(type: string, cb: Function): any;
-        on<T>(type: "change", cb: (args: {
-            type: string;
-            target: SearchForm;
-            value: {
-                [name: string]: any;
-            };
-        }) => void): any;
-        readonly value: {
-            [name: string]: any;
-        };
-    }
-}
-declare module "index" {
-    /**
-     * forces 'ol3-popup' namespace
-     */
-    import Input = require("ol3-search/ol3-search");
-    export = Input;
-}
 declare module "bower_components/ol3-fun/ol3-fun/navigation" {
     import ol = require("openlayers");
     /**
@@ -126,6 +59,61 @@ declare module "bower_components/ol3-fun/index" {
         navigation: typeof navigation;
     };
     export = index;
+}
+declare module "ol3-search/ol3-search" {
+    import ol = require("openlayers");
+    import { SearchField } from "./providers";
+    export interface IOptions extends olx.control.ControlOptions {
+        className?: string;
+        position?: string;
+        expanded?: boolean;
+        hideButton?: boolean;
+        autoChange?: boolean;
+        autoClear?: boolean;
+        autoCollapse?: boolean;
+        canCollapse?: boolean;
+        closedText?: string;
+        showLabels?: boolean;
+        openedText?: string;
+        source?: HTMLElement;
+        target?: HTMLElement;
+        title?: string;
+        fields?: SearchField[];
+    }
+    export class SearchForm extends ol.control.Control {
+        static create(options?: IOptions): SearchForm;
+        button: HTMLButtonElement;
+        form: HTMLFormElement;
+        options: IOptions;
+        handlers: Array<() => void>;
+        constructor(options: IOptions & {
+            element: HTMLElement;
+            target: HTMLElement;
+        });
+        destroy(): void;
+        setPosition(position: string): void;
+        cssin(): void;
+        collapse(options?: IOptions): void;
+        expand(options?: IOptions): void;
+        on(type: string, cb: Function): any;
+        on<T>(type: "change", cb: (args: {
+            type: string;
+            target: SearchForm;
+            value: {
+                [name: string]: any;
+            };
+        }) => void): any;
+        readonly value: {
+            [name: string]: any;
+        };
+    }
+}
+declare module "index" {
+    /**
+     * forces 'ol3-popup' namespace
+     */
+    import Input = require("ol3-search/ol3-search");
+    export = Input;
 }
 declare module "bower_components/ol3-fun/ol3-fun/snapshot" {
     import ol = require("openlayers");
@@ -346,7 +334,7 @@ declare module "bower_components/ol3-symbolizer/index" {
 }
 declare module "ol3-search/providers/google" {
     import ol = require("openlayers");
-    import { Request, Result } from "./index";
+    import { Request, Result, SearchField } from "./index";
     export module GoogleGeocode {
         interface Request {
             address?: string;
@@ -399,6 +387,7 @@ declare module "ol3-search/providers/google" {
     export class GoogleGeocode {
         static DEFAULT_OPTIONS: GoogleGeocodeOptions;
         private options;
+        readonly fields: SearchField[];
         constructor(options?: GoogleGeocodeOptions);
         getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map): Request<GoogleGeocode.Request>;
         handleResponse(response: GoogleGeocode.Response): Result<GoogleGeocode.ResponseItem>[];
@@ -943,7 +932,7 @@ declare module "ol3-search/examples/index" {
 }
 declare module "ol3-search/providers/osm" {
     import ol = require("openlayers");
-    import { Request, Result } from "./index";
+    import { Request, Result, SearchField } from "./index";
     export module OpenStreet {
         interface Request {
             format?: "json";
@@ -1017,6 +1006,7 @@ declare module "ol3-search/providers/osm" {
         static DEFAULT_OPTIONS: GeocodeOptions;
         private options;
         constructor(options?: GeocodeOptions);
+        readonly fields: SearchField[];
         getParameters(options: Request<OpenStreet.Request>, map?: ol.Map): Request<OpenStreet.Request>;
         handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
     }

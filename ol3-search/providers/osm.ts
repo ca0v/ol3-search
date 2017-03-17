@@ -1,7 +1,7 @@
 // https://github.com/jonataswalker/ol3-geocoder/blob/master/src/js/providers/osm.js
 import ol = require("openlayers");
 import { defaults } from "ol3-fun/ol3-fun/common";
-import { Request, Result } from "./index";
+import { Request, Result, SearchField } from "./index";
 
 export module OpenStreet {
 
@@ -98,6 +98,49 @@ export class OpenStreet {
         this.options = defaults(options || {}, OpenStreet.DEFAULT_OPTIONS);
     }
 
+    get fields() {
+        return <Array<SearchField>>[{
+            name: "q",
+            alias: "*"
+        },
+        {
+            name: "postalcode",
+            alias: "Postal Code"
+        },
+        {
+            name: "housenumber",
+            alias: "House Number",
+            length: 10,
+            type: "integer"
+        },
+        {
+            name: "streetname",
+            alias: "Street Name"
+        },
+        {
+            name: "city",
+            alias: "City"
+        },
+        {
+            name: "county",
+            alias: "County"
+        },
+        {
+            name: "country",
+            alias: "Country",
+            domain: {
+                type: "",
+                name: "",
+                codedValues: [
+                    {
+                        name: "us", code: "us"
+                    }
+                ]
+            }
+        },
+        ]
+    }
+
     getParameters(options: Request<OpenStreet.Request>, map?: ol.Map) {
 
         defaults(options, this.options);
@@ -136,7 +179,7 @@ export class OpenStreet {
     }
 
     handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[] {
-        
+
         let asExtent = (r: OpenStreet.ResponseItem) => {
             let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));
             let extent = <ol.Extent>[lon1, lat1, lon2, lat2];

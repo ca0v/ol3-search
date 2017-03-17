@@ -1,6 +1,6 @@
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
-import { Request, Result } from "./index";
+import { Request, Result, SearchField } from "./index";
 
 export module GoogleGeocode {
 
@@ -95,6 +95,14 @@ export class GoogleGeocode {
     }
 
     private options: GoogleGeocodeOptions;
+
+    get fields() {
+        return <Array<SearchField>>[{
+            name: "address",
+            alias: "Location",
+            length: 50
+        }]
+    }
 
     constructor(options?: GoogleGeocodeOptions) {
         this.options = defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);

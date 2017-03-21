@@ -477,8 +477,17 @@ declare module "ol3-search/providers/google" {
 }
 declare module "ol3-search/providers/bing" {
     import ol = require("openlayers");
-    import { Result, SearchField } from "./index";
+    import { Request, Result, SearchField } from "./index";
     export module Bing {
+        interface Request {
+            query?: string;
+            key?: string;
+            includeNeighborhood?: 0 | 1;
+            maxResults?: number;
+            umv?: string;
+            ul?: string;
+            userRegion?: string;
+        }
         interface Point {
             type: string;
             coordinates: number[];
@@ -525,51 +534,14 @@ declare module "ol3-search/providers/bing" {
             traceId: string;
         }
     }
+    export interface BingGeocodeOptions extends Request<Bing.Request> {
+    }
     export class Bing {
-        settings: {
-            url: string;
-            callbackName: string;
-            dataType: string;
-            method: string;
-            params: {
-                query: string;
-                key: string;
-                includeNeighborhood: number;
-                maxResults: number;
-            };
-        };
-        constructor(settings?: {
-            url: string;
-            callbackName: string;
-            dataType: string;
-            method: string;
-            params: {
-                query: string;
-                key: string;
-                includeNeighborhood: number;
-                maxResults: number;
-            };
-        });
+        private options;
+        static DEFAULT_OPTIONS: BingGeocodeOptions;
+        constructor(options?: BingGeocodeOptions);
         readonly fields: SearchField[];
-        getParameters(options: {
-            params: {
-                query?: string;
-                key?: string;
-                includeNeighborhood?: boolean;
-                maxResults?: number;
-            };
-        }, map?: ol.Map): {
-            url: string;
-            callbackName: string;
-            dataType: string;
-            method: string;
-            params: {
-                query: string;
-                key: string;
-                includeNeighborhood: number | boolean;
-                maxResults: number;
-            };
-        };
+        getParameters(options: Request<Bing.Request>, map?: ol.Map): Request<Bing.Request>;
         handleResponse(response: Bing.Response): Result<Bing.Resource>[];
     }
 }

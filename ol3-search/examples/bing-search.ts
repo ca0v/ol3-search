@@ -187,11 +187,16 @@ table.ol-grid-table > td {
     });
 
 
-    form.on("change", args => {
+    form.on("change", (args: {
+        value: Bing.Request & {
+            bounded: boolean
+        }
+    }) => {
         if (!args.value) return;
         console.log("search", args.value);
 
         let searchArgs = searchProvider.getParameters({
+            bounded: args.value.bounded,
             params: args.value
         }, map);
 

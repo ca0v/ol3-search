@@ -1,4 +1,5 @@
 import ol = require("openlayers");
+import { defaults } from "ol3-fun";
 import { Request, Result, SearchField } from "./index";
 
 const SampleError = {
@@ -51,6 +52,16 @@ const SampleResponse = {
 
 export module Bing {
 
+    export interface Request {
+        query?: string;
+        key?: string;
+        includeNeighborhood?: 0|1;
+        maxResults?: number; // 1..20
+        umv?: string; // userMapView (lat,lon,lat,lon)
+        ul?: string; // user location (lat,lon)
+        userRegion?: string; // region/country code
+    }
+
     export interface Point {
         type: string;
         coordinates: number[];
@@ -58,7 +69,7 @@ export module Bing {
 
     export interface Address {
         addressLine: string;
-        neighborhood: string;        
+        neighborhood: string;
         locality: string;
         adminDistrict: string;
         adminDistrict2: string;
@@ -84,7 +95,7 @@ export module Bing {
         confidence: string;
         entityType: string;
         geocodePoints: GeocodePoint[];
-        matchCodes: Array<'Good'|'Ambiguous'|'UpHierarchy'>;
+        matchCodes: Array<'Good' | 'Ambiguous' | 'UpHierarchy'>;
     }
 
     export interface ResourceSet {
@@ -103,9 +114,14 @@ export module Bing {
     }
 }
 
+export interface BingGeocodeOptions extends Request<Bing.Request> {
+}
+
 export class Bing {
 
-    constructor(public settings = {
+    private options: BingGeocodeOptions;
+
+    static DEFAULT_OPTIONS = <BingGeocodeOptions>{
         url: '//dev.virtualearth.net/REST/v1/Locations',
         callbackName: 'jsonp',
         dataType: 'jsonp',
@@ -114,9 +130,12 @@ export class Bing {
             query: '',
             key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg',
             includeNeighborhood: 0,
-            maxResults: 10
+            maxResults: 1
         }
-    }) {
+    }
+
+    constructor(options?: BingGeocodeOptions) {
+        this.options = defaults(options || {}, Bing.DEFAULT_OPTIONS);
     }
 
     get fields() {
@@ -124,34 +143,22 @@ export class Bing {
             name: "query",
             alias: "Location",
             length: 50
-        },
-        {
-            name: "includeNeighborhood",
-            alias: "Include Neighborhoods?",
-            default: false
         }]
     }
 
-    getParameters(options: {
-        params: {
-            query?: string;
-            key?: string;
-            includeNeighborhood?: boolean;
-            maxResults?: number;
-        }
-    }, map?: ol.Map) {
-        return {
-            url: this.settings.url,
-            callbackName: this.settings.callbackName,
-            dataType: this.settings.dataType,
-            method: this.settings.method,
-            params: {
-                query: options.params.query,
-                key: options.params.key || this.settings.params.key,
-                includeNeighborhood: options.params.includeNeighborhood || this.settings.params.includeNeighborhood,
-                maxResults: options.params.maxResults || this.settings.params.maxResults
+    getParameters(options: Request<Bing.Request>, map?: ol.Map) {
+        defaults(options.params, this.options.params);
+        defaults(options, this.options);
+
+        if (map && options.bounded) {
+            let extent = map.getView().calculateExtent(map.getSize());
+            let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
+            {
+                let b = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent().map(v => v.toFixed(6));
+                options.params.umv = `${b[1]},${b[0]},${b[3]},${b[2]}`;
             }
-        };
+        }
+        return options;
     }
 
     handleResponse(response: Bing.Response): Result<Bing.Resource>[] {

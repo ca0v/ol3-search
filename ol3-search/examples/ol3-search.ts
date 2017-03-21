@@ -6,7 +6,8 @@ import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
 import { OpenStreet } from "../providers/osm";
 import { GoogleGeocode } from "../providers/google";
-import { Bing } from "../providers/bing";
+import { BingGeocode } from "../providers/bing";
+import { MapQuestGeocode } from "../providers/mapquest";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -57,7 +58,8 @@ table.ol-grid-table > td {
 
     //let searchProvider = new GoogleGeocode();
     // let searchProvider = new OpenStreet();
-    let searchProvider = new Bing();
+    // let searchProvider = new BingGeocode();
+    let searchProvider = new MapQuestGeocode();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 

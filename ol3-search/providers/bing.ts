@@ -50,7 +50,7 @@ const SampleResponse = {
     "traceId": "a7eba6ba242b4ffe93e28046a127dd23|BN20130442|7.7.0.0|"
 }
 
-export module Bing {
+export module BingGeocode {
 
     export interface Request {
         query?: string;
@@ -114,10 +114,10 @@ export module Bing {
     }
 }
 
-export interface BingGeocodeOptions extends Request<Bing.Request> {
+export interface BingGeocodeOptions extends Request<BingGeocode.Request> {
 }
 
-export class Bing {
+export class BingGeocode {
 
     private options: BingGeocodeOptions;
 
@@ -135,7 +135,7 @@ export class Bing {
     }
 
     constructor(options?: BingGeocodeOptions) {
-        this.options = defaults(options || {}, Bing.DEFAULT_OPTIONS);
+        this.options = defaults(options || {}, BingGeocode.DEFAULT_OPTIONS);
     }
 
     get fields() {
@@ -146,7 +146,7 @@ export class Bing {
         }]
     }
 
-    getParameters(options: Request<Bing.Request>, map?: ol.Map) {
+    getParameters(options: Request<BingGeocode.Request>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
 
@@ -161,9 +161,9 @@ export class Bing {
         return options;
     }
 
-    handleResponse(response: Bing.Response): Result<Bing.Resource>[] {
+    handleResponse(response: BingGeocode.Response): Result<BingGeocode.Resource>[] {
 
-        let asExtent = (r: Bing.Resource) => {
+        let asExtent = (r: BingGeocode.Resource) => {
             let v = r.bbox;
             return new ol.geom.Polygon([[[v[1], v[0]], [v[3], v[2]]]]);
         };
@@ -177,11 +177,11 @@ export class Bing {
                 lat: result.point.coordinates[0],
                 address: {
                     name: result.address.formattedAddress,
-                    road: result.address.adminDistrict,
-                    postcode: result.address.adminDistrict2,
-                    city: result.address.countryRegion,
-                    state: "",
-                    country: "",
+                    road: result.address.addressLine,
+                    postcode: result.address.postalCode,
+                    city: result.address.adminDistrict,
+                    state: result.address.adminDistrict2,
+                    country: result.address.countryRegion,
                 },
                 original: result
             }));

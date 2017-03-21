@@ -332,6 +332,87 @@ declare module "bower_components/ol3-symbolizer/index" {
     import Symbolizer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer");
     export = Symbolizer;
 }
+declare module "ol3-search/providers/osm" {
+    import ol = require("openlayers");
+    import { Request, Result, SearchField } from "./index";
+    export module OpenStreet {
+        interface Request {
+            format?: "json";
+            callback?: "define";
+            "accept-language"?: "en-US";
+            q?: string | {
+                street?: {
+                    housenumber?: number;
+                    streetname?: string;
+                };
+                city?: string;
+                county?: string;
+                state?: string;
+                country?: string;
+                postalcode?: string;
+            };
+            countrycodes?: string[];
+            viewbox?: {
+                left: number;
+                top: number;
+                right: number;
+                bottom: number;
+            };
+            bounded?: boolean;
+            addressdetails?: boolean;
+            email?: string;
+            exclude_place_ids?: string[];
+            limit?: number;
+            dedupe?: boolean;
+            polygon?: "geojson" | "kml" | "svg" | "wkt";
+            extratags?: boolean;
+            namedetails?: boolean;
+        }
+        interface Address {
+            road: string;
+            state: string;
+            country: string;
+        }
+        interface Address {
+            neighbourhood: string;
+            postcode: string;
+            city: string;
+            town: string;
+        }
+        interface Address {
+            peak: string;
+            county: string;
+            country_code: string;
+            sports_centre: string;
+        }
+        interface ResponseItem {
+            place_id: string;
+            licence: string;
+            osm_type: string;
+            osm_id: string;
+            boundingbox: string[];
+            lat: string;
+            lon: string;
+            display_name: string;
+            class: string;
+            type: string;
+            importance: number;
+            icon: string;
+            address: Address;
+        }
+        type Response = ResponseItem[];
+    }
+    export interface GeocodeOptions extends Request<OpenStreet.Request> {
+    }
+    export class OpenStreet {
+        static DEFAULT_OPTIONS: GeocodeOptions;
+        private options;
+        constructor(options?: GeocodeOptions);
+        readonly fields: SearchField[];
+        getParameters(options: Request<OpenStreet.Request>, map?: ol.Map): Request<OpenStreet.Request>;
+        handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
+    }
+}
 declare module "ol3-search/providers/google" {
     import ol = require("openlayers");
     import { Request, Result, SearchField } from "./index";
@@ -392,6 +473,104 @@ declare module "ol3-search/providers/google" {
         getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map): Request<GoogleGeocode.Request>;
         handleResponse(response: GoogleGeocode.Response): Result<GoogleGeocode.ResponseItem>[];
         private parseComponents(address_components, result);
+    }
+}
+declare module "ol3-search/providers/bing" {
+    import ol = require("openlayers");
+    import { Result, SearchField } from "./index";
+    export module Bing {
+        interface Point {
+            type: string;
+            coordinates: number[];
+        }
+        interface Address {
+            addressLine: string;
+            neighborhood: string;
+            locality: string;
+            adminDistrict: string;
+            adminDistrict2: string;
+            countryRegion: string;
+            countryRegionIso2: string;
+            postalCode: string;
+            formattedAddress: string;
+            landmark: string;
+        }
+        interface GeocodePoint {
+            type: string;
+            coordinates: number[];
+            calculationMethod: string;
+            usageTypes: string[];
+        }
+        interface Resource {
+            bbox: number[];
+            name: string;
+            point: Point;
+            address: Address;
+            confidence: string;
+            entityType: string;
+            geocodePoints: GeocodePoint[];
+            matchCodes: Array<'Good' | 'Ambiguous' | 'UpHierarchy'>;
+        }
+        interface ResourceSet {
+            estimatedTotal: number;
+            resources: Resource[];
+        }
+        interface Response {
+            authenticationResultCode: string;
+            brandLogoUri: string;
+            copyright: string;
+            resourceSets: ResourceSet[];
+            statusCode: number;
+            statusDescription: string;
+            traceId: string;
+        }
+    }
+    export class Bing {
+        settings: {
+            url: string;
+            callbackName: string;
+            dataType: string;
+            method: string;
+            params: {
+                query: string;
+                key: string;
+                includeNeighborhood: number;
+                maxResults: number;
+            };
+        };
+        constructor(settings?: {
+            url: string;
+            callbackName: string;
+            dataType: string;
+            method: string;
+            params: {
+                query: string;
+                key: string;
+                includeNeighborhood: number;
+                maxResults: number;
+            };
+        });
+        readonly fields: SearchField[];
+        getParameters(options: {
+            params: {
+                query?: string;
+                key?: string;
+                includeNeighborhood?: boolean;
+                maxResults?: number;
+            };
+        }, map?: ol.Map): {
+            url: string;
+            callbackName: string;
+            dataType: string;
+            method: string;
+            params: {
+                query: string;
+                key: string;
+                includeNeighborhood: number | boolean;
+                maxResults: number;
+            };
+        };
+        handleResponse(response: Bing.Response): Result<Bing.Resource>[];
     }
 }
 declare module "bower_components/ol3-symbolizer/ol3-symbolizer/common/ajax" {
@@ -924,92 +1103,14 @@ declare module "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source" {
         static create(options: IOptions): JQueryDeferred<ol.layer.Vector[]>;
     }
 }
+declare module "ol3-search/examples/bing-search" {
+    export function run(): void;
+}
 declare module "ol3-search/examples/google-search" {
     export function run(): void;
 }
 declare module "ol3-search/examples/index" {
     export function run(): void;
-}
-declare module "ol3-search/providers/osm" {
-    import ol = require("openlayers");
-    import { Request, Result, SearchField } from "./index";
-    export module OpenStreet {
-        interface Request {
-            format?: "json";
-            callback?: "define";
-            "accept-language"?: "en-US";
-            q?: string | {
-                street?: {
-                    housenumber?: number;
-                    streetname?: string;
-                };
-                city?: string;
-                county?: string;
-                state?: string;
-                country?: string;
-                postalcode?: string;
-            };
-            countrycodes?: string[];
-            viewbox?: {
-                left: number;
-                top: number;
-                right: number;
-                bottom: number;
-            };
-            bounded?: boolean;
-            addressdetails?: boolean;
-            email?: string;
-            exclude_place_ids?: string[];
-            limit?: number;
-            dedupe?: boolean;
-            polygon?: "geojson" | "kml" | "svg" | "wkt";
-            extratags?: boolean;
-            namedetails?: boolean;
-        }
-        interface Address {
-            road: string;
-            state: string;
-            country: string;
-        }
-        interface Address {
-            neighbourhood: string;
-            postcode: string;
-            city: string;
-            town: string;
-        }
-        interface Address {
-            peak: string;
-            county: string;
-            country_code: string;
-            sports_centre: string;
-        }
-        interface ResponseItem {
-            place_id: string;
-            licence: string;
-            osm_type: string;
-            osm_id: string;
-            boundingbox: string[];
-            lat: string;
-            lon: string;
-            display_name: string;
-            class: string;
-            type: string;
-            importance: number;
-            icon: string;
-            address: Address;
-        }
-        type Response = ResponseItem[];
-    }
-    export interface GeocodeOptions extends Request<OpenStreet.Request> {
-    }
-    export class OpenStreet {
-        static DEFAULT_OPTIONS: GeocodeOptions;
-        private options;
-        constructor(options?: GeocodeOptions);
-        readonly fields: SearchField[];
-        getParameters(options: Request<OpenStreet.Request>, map?: ol.Map): Request<OpenStreet.Request>;
-        handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
-    }
 }
 declare module "ol3-search/examples/ol3-search" {
     export function run(): void;

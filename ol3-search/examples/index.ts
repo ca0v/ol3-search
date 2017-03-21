@@ -3,6 +3,7 @@ export function run() {
     let path = `${l.origin}${l.pathname}?run=ol3-search/examples/`;
     let labs = `
     index
+    bing-search
     google-search
     osm-search
     ol3-search

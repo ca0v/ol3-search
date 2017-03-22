@@ -4,10 +4,7 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { OpenStreetGeocode } from "../providers/osm";
-import { GoogleGeocode } from "../providers/google";
-import { BingGeocode } from "../providers/bing";
-import { MapQuestGeocode } from "../providers/mapquest";
+import { WfsGeocode as Geocoder } from "../providers/wfs";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -56,10 +53,7 @@ table.ol-grid-table > td {
 
     `);
 
-    //let searchProvider = new GoogleGeocode();
-    // let searchProvider = new OpenStreet();
-    // let searchProvider = new BingGeocode();
-    let searchProvider = new MapQuestGeocode();
+    let searchProvider = new Geocoder();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 

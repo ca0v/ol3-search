@@ -23,6 +23,8 @@ export interface Request<T> {
     query?: string;
     key?: string;
     lang?: string;
+    count?: number;
+    extent?: ol.Extent;
     bounded?: boolean;
     params: T
 }
@@ -47,3 +49,8 @@ export interface SearchField {
     length?: number;
 }
 
+export interface Geocoder<TRequest,  TResult> {
+    fields: SearchField[];
+    getParameters(options: Request<TRequest>, map?: ol.Map): Request<TRequest>;
+    handleResponse(response: any): Result<TResult>[];
+}

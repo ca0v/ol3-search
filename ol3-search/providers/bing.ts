@@ -1,6 +1,6 @@
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
-import { Request, Result, SearchField } from "./index";
+import { Request, Result, SearchField, Geocoder } from "./index";
 
 const SampleError = {
     "authenticationResultCode": "NoCredentials",
@@ -117,7 +117,7 @@ export module BingGeocode {
 export interface BingGeocodeOptions extends Request<BingGeocode.Request> {
 }
 
-export class BingGeocode {
+export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Resource> {
 
     private options: BingGeocodeOptions;
 

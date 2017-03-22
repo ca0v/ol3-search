@@ -108,7 +108,7 @@ export class MapQuestGeocode {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
 
-        if (map && options.bounded) {
+        if (map && options.bounded && !options.params.viewbox) {
             let extent = map.getView().calculateExtent(map.getSize());
             let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
             {

@@ -3,7 +3,7 @@ import ol = require("openlayers");
 import { defaults } from "ol3-fun/ol3-fun/common";
 import { Request, Result, SearchField } from "./index";
 
-export module OpenStreet {
+export module OpenStreetGeocode {
 
     export interface Request {
         format?: "json";
@@ -73,16 +73,16 @@ export module OpenStreet {
 
 }
 
-export interface GeocodeOptions extends Request<OpenStreet.Request> {
+export interface OpenStreetGeocodeOptions extends Request<OpenStreetGeocode.Request> {
 }
 
-export class OpenStreet {
+export class OpenStreetGeocode {
 
-    static DEFAULT_OPTIONS = <GeocodeOptions>{
+    static DEFAULT_OPTIONS = <OpenStreetGeocodeOptions>{
         url: '//nominatim.openstreetmap.org/search/',
         dataType: 'json',
         method: 'GET',
-        params: <OpenStreet.Request>{
+        params: <OpenStreetGeocode.Request>{
             q: '',
             format: 'json',
             addressdetails: true,
@@ -92,10 +92,10 @@ export class OpenStreet {
         }
     }
 
-    private options: GeocodeOptions;
+    private options: OpenStreetGeocodeOptions;
 
-    constructor(options?: GeocodeOptions) {
-        this.options = defaults(options || {}, OpenStreet.DEFAULT_OPTIONS);
+    constructor(options?: OpenStreetGeocodeOptions) {
+        this.options = defaults(options || {}, OpenStreetGeocode.DEFAULT_OPTIONS);
     }
 
     get fields() {
@@ -141,10 +141,10 @@ export class OpenStreet {
         ]
     }
 
-    getParameters(options: Request<OpenStreet.Request>, map?: ol.Map) {
+    getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map) {
 
-        defaults(options, this.options);
         defaults(options.params, this.options.params);
+        defaults(options, this.options);
 
         if (!options.params.viewbox && map) {
             let extent = map.getView().calculateExtent(map.getSize());
@@ -178,9 +178,9 @@ export class OpenStreet {
         return options;
     }
 
-    handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[] {
+    handleResponse(response: OpenStreetGeocode.Response): Result<OpenStreetGeocode.ResponseItem>[] {
 
-        let asExtent = (r: OpenStreet.ResponseItem) => {
+        let asExtent = (r: OpenStreetGeocode.ResponseItem) => {
             let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));
             let extent = <ol.Extent>[lon1, lat1, lon2, lat2];
 
@@ -206,7 +206,7 @@ export class OpenStreet {
                 state: result.address.state,
                 country: result.address.country
             },
-            original: result,
+            original: result
         }));
     }
 }

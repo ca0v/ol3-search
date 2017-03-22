@@ -175,7 +175,7 @@ table.ol-grid-table > td {
         className: 'ol-search',
         position: 'top right',
         expanded: true,
-        title: "Search",
+        title: "MapQuest Search",
         showLabels: false,
         autoClear: true,
         autoCollapse: true,

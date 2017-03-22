@@ -125,7 +125,7 @@ export function run() {
         className: 'ol-search',
         position: 'top right',
         expanded: true,
-        title: "Google Search Form",
+        title: "Google Search",
         fields: [
             {
                 name: "address",

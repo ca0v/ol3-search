@@ -4,7 +4,7 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { OpenStreet } from "../providers/osm";
+import { OpenStreetGeocode } from "../providers/osm";
 import { GoogleGeocode } from "../providers/google";
 import { BingGeocode } from "../providers/bing";
 import { MapQuestGeocode } from "../providers/mapquest";
@@ -189,11 +189,14 @@ table.ol-grid-table > td {
     });
 
 
-    form.on("change", args => {
+    form.on("change", (args: {
+        value: any
+    }) => {
         if (!args.value) return;
         console.log("search", args.value);
 
         let searchArgs = searchProvider.getParameters({
+            bounded: args.value.bounded === 1,
             params: args.value
         }, map);
 

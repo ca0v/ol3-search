@@ -5,6 +5,7 @@ export function run() {
     index
     bing-search
     google-search
+    mapquest-search
     osm-search
     ol3-search
     `;

@@ -4,7 +4,7 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { BingGeocode } from "../providers/bing";
+import { MapQuestGeocode } from "../providers/mapquest";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -53,9 +53,8 @@ table.ol-grid-table > td {
 
     `);
 
-    //let searchProvider = new GoogleGeocode();
-    // let searchProvider = new OpenStreet();
-    let searchProvider = new BingGeocode();
+
+    let searchProvider = new MapQuestGeocode();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
@@ -186,7 +185,7 @@ table.ol-grid-table > td {
 
 
     form.on("change", (args: {
-        value: BingGeocode.Request & {
+        value: MapQuestGeocode.Request & {
             bounded: boolean
         }
     }) => {
@@ -208,12 +207,14 @@ table.ol-grid-table > td {
             let results = searchProvider.handleResponse(json);
             results.some(r => {
                 console.log(r);
+
                 if (r.address) {
                     let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
                     let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                     feature.set("text", r.title);
                     source.addFeature(feature);
                 }
+
                 if (r.extent) {
                     let feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
                     navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });

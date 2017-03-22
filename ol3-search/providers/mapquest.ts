@@ -32,6 +32,15 @@ const SampleResponse = [{
 export module MapQuestGeocode {
 
     export interface Request {
+        viewbox?: string;
+        bounded?: 0 | 1;
+        q: string;
+        key: string;
+        format?: string;
+        addressdetails?: 0 | 1;
+        limit?: number;
+        countrycodes?: string;
+        'accept-language': string;
     }
 
     export interface Resource {
@@ -39,12 +48,12 @@ export module MapQuestGeocode {
         license: string;
         osm_type: string;
         osm_id: string;
-        boundingbox: string[];        
+        boundingbox: string[];
         lat: string;
         lon: string;
         display_name: string;
         class: string;
-        type: string;        
+        type: string;
         importance: number;
         icon: string;
         address: {
@@ -104,8 +113,8 @@ export class MapQuestGeocode {
             let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
             {
                 let b = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent().map(v => v.toFixed(6));
-                debugger;
-                //options.params.umv = `${b[1]},${b[0]},${b[3]},${b[2]}`;
+                options.params.viewbox = `${b[0]},${b[3]},${b[2]},${b[1]}`;
+                options.params.bounded = 0; // viewbox is just a suggestion
             }
         }
         return options;
@@ -115,11 +124,11 @@ export class MapQuestGeocode {
 
         let asExtent = (r: MapQuestGeocode.Resource) => {
             let v = r.boundingbox.map(v => parseFloat(v));
-            return new ol.geom.Polygon([[[v[1], v[0]], [v[3], v[2]]]]);
+            return new ol.geom.Polygon([[[v[2], v[0]], [v[3], v[1]]]]);
         };
 
         return response.map(result => ({
-            title: "",
+            title: result.display_name,
             extent: asExtent(result),
             lon: parseFloat(result.lon),
             lat: parseFloat(result.lat),

@@ -1,3 +1,4 @@
+import $ = require("jquery");
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
 import { Geocoder, Request, Result, SearchField } from "./index";
@@ -102,10 +103,17 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
             name: "q",
             alias: "Location",
             length: 50
-        }]
+        },
+        {
+            name: "bounded",
+            alias: "Current Extent?",
+            default: true
+        }
+        ]
     }
 
-    execute(options: Request<MapQuestGeocode.Request>) {
+    execute(params: MapQuestGeocode.Request) {
+        let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<MapQuestGeocode.Resource>[]>();
         $.ajax({
             url: options.url,
@@ -115,13 +123,11 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
-            .fail(() => {
-                console.error("geocoder failed");
-            });
+            .fail(() => d.reject("geocoder failed"));
         return d;
     }
 
-    getParameters(options: Request<MapQuestGeocode.Request>, map?: ol.Map) {
+    private getParameters(options: Request<MapQuestGeocode.Request>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
 
@@ -137,7 +143,7 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
         return options;
     }
 
-    handleResponse(response: MapQuestGeocode.Response): Result<MapQuestGeocode.Resource>[] {
+    private handleResponse(response: MapQuestGeocode.Response): Result<MapQuestGeocode.Resource>[] {
 
         let asExtent = (r: MapQuestGeocode.Resource) => {
             let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));

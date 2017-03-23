@@ -54,20 +54,21 @@ import { Request, Result, SearchField, Geocoder } from "./index";
 const olFormatFilter = <{
     like: any;
     or: any;
-}><any>ol.format.filter;
+}>ol.format["filter"];
 
 export module WfsGeocode {
 
     export interface WfsRequest {
+        query?: string;
         // namespace
-        featureNS: string;
+        featureNS?: string;
         // namespace prefix
-        featurePrefix: string;
+        featurePrefix?: string;
         // geometry types
-        featureTypes: string[];
+        featureTypes?: string[];
         // field to search
-        searchNames: string[];
-        propertyNames: string[];
+        searchNames?: string[];
+        propertyNames?: string[];
     }
 
     export interface WfsResult {
@@ -92,6 +93,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         contentType: 'application/xml',
         method: 'POST',
         params: {
+            query: '',
             featureNS: "http://www.opengeospatial.net/cite",
             featurePrefix: "cite",
             count: 1,
@@ -106,10 +108,23 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
     }
 
     get fields(): SearchField[] {
-        return [];
+        return [
+            {
+                name: "query",
+                alias: "Search For",
+                default: "",
+                length: 50
+            },
+            {
+                name: "bounded",
+                alias: "Current Extent?",
+                default: true
+            }
+        ];
     }
 
-    execute(options: Request<WfsGeocode.WfsRequest>) {
+    execute(params: WfsGeocode.WfsRequest) {
+        let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<WfsGeocode.WfsResult>[]>();
         $.ajax({
             url: options.url,
@@ -120,19 +135,17 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
-            .fail(() => {
-                console.error("geocoder failed");
-            });
+            .fail(() => d.reject("geocoder failed"));
         return d;
     }
 
-    getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map) {
+    private getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
 
         let format = new ol.format.WFS();
 
-        let searchText = options.query.replace(/ /g, "*");
+        let searchText = options.params.query.replace(/ /g, "*");
         let filters = options.params.searchNames.map(searchName => olFormatFilter.like(searchName, `*${searchText}*`));
         let filter = (filters.length > 1) ? olFormatFilter.or.apply(olFormatFilter.or, filters) : filters[0];
 
@@ -161,7 +174,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         return options;
     }
 
-    handleResponse(response: WfsGeocode.WfsResponse): Result<WfsGeocode.WfsResult>[] {
+    private handleResponse(response: WfsGeocode.WfsResponse): Result<WfsGeocode.WfsResult>[] {
         let format = new ol.format.WFS();
         let result = format.readFeatures(response);
 

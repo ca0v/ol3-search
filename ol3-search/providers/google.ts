@@ -98,18 +98,28 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
     private options: GoogleGeocodeOptions;
 
     get fields() {
-        return <Array<SearchField>>[{
-            name: "address",
-            alias: "Location",
-            length: 50
-        }]
+        return <Array<SearchField>>[
+            {
+                name: "address",
+                alias: "Location",
+                default: "LAX",
+                length: 50
+            },
+            {
+                name: "bounded",
+                alias: "Current Extent?",
+                default: true
+            }
+        ]
     }
 
     constructor(options?: GoogleGeocodeOptions) {
         this.options = defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
     }
 
-    execute(options: Request<GoogleGeocode.Request>) {
+    execute(params: GoogleGeocode.Request) {
+        let options = this.getParameters({ params: params }, this.options.map);
+
         let d = $.Deferred<Result<GoogleGeocode.ResponseItem>[]>();
         $.ajax({
             url: options.url,
@@ -119,13 +129,12 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
-            .fail(() => {
-                console.error("geocoder failed");
-            });
+            .fail(() => d.reject("geocoder failed"));
+            
         return d;
     }
 
-    public getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map) {
+    private getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map) {
         options.url = options.url || this.options.url;
 
         options.params.address = options.query || options.params.address || this.options.params.address
@@ -143,7 +152,7 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
         return options;
     }
 
-    public handleResponse(response: GoogleGeocode.Response): Result<GoogleGeocode.ResponseItem>[] {
+    private handleResponse(response: GoogleGeocode.Response): Result<GoogleGeocode.ResponseItem>[] {
 
         console.assert(response.status === "OK", "status OK");
 

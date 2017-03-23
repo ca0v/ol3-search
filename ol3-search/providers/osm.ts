@@ -1,4 +1,4 @@
-// https://github.com/jonataswalker/ol3-geocoder/blob/master/src/js/providers/osm.js
+import $ = require("jquery");
 import ol = require("openlayers");
 import { defaults } from "ol3-fun/ol3-fun/common";
 import { Geocoder, Request, Result, SearchField } from "./index";
@@ -99,49 +99,24 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
     }
 
     get fields() {
-        return <Array<SearchField>>[{
-            name: "q",
-            alias: "*"
-        },
-        {
-            name: "postalcode",
-            alias: "Postal Code"
-        },
-        {
-            name: "housenumber",
-            alias: "House Number",
-            length: 10,
-            type: "integer"
-        },
-        {
-            name: "streetname",
-            alias: "Street Name"
-        },
-        {
-            name: "city",
-            alias: "City"
-        },
-        {
-            name: "county",
-            alias: "County"
-        },
-        {
-            name: "country",
-            alias: "Country",
-            domain: {
-                type: "",
-                name: "",
-                codedValues: [
-                    {
-                        name: "us", code: "us"
-                    }
-                ]
+        return <Array<SearchField>>[
+            {
+                name: "q",
+                alias: "*",
+                default: "LAX",
+                length: 50
+            },
+            {
+                name: "bounded",
+                alias: "Current Extent?",
+                type: "boolean",
+                default: true
             }
-        },
         ]
     }
 
-    execute(options: Request<OpenStreetGeocode.Request>) {
+    execute(params: OpenStreetGeocode.Request) {
+        let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<OpenStreetGeocode.ResponseItem>[]>();
         $.ajax({
             url: options.url,
@@ -151,13 +126,11 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
-            .fail(() => {
-                console.error("geocoder failed");
-            });
+            .fail(() => d.reject("geocoder failed"));
         return d;
     }
 
-    getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map) {
+    private getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map) {
 
         defaults(options.params, this.options.params);
         defaults(options, this.options);
@@ -194,7 +167,7 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
         return options;
     }
 
-    handleResponse(response: OpenStreetGeocode.Response): Result<OpenStreetGeocode.ResponseItem>[] {
+    private handleResponse(response: OpenStreetGeocode.Response): Result<OpenStreetGeocode.ResponseItem>[] {
 
         let asExtent = (r: OpenStreetGeocode.ResponseItem) => {
             let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));

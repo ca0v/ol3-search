@@ -3,7 +3,7 @@ import ol = require("openlayers");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { BingGeocode } from "../providers/bing";
+import { BingGeocode as Geocoder } from "../providers/bing";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -51,10 +51,6 @@ table.ol-grid-table > td {
 }
 
     `);
-
-    //let searchProvider = new GoogleGeocode();
-    // let searchProvider = new OpenStreet();
-    let searchProvider = new BingGeocode();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
@@ -161,15 +157,11 @@ table.ol-grid-table > td {
         map.addLayer(vector);
     });
 
-    let searchFields = searchProvider.fields.concat([
-        {
-            name: "bounded",
-            alias: "Current Extent?",
-            default: true
-        }
-    ]);
-
-    searchFields[0].default = "LAX";
+    let searchProvider = new Geocoder({
+        map: map,
+        count: 1,
+        key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg'
+    });
 
     let form = SearchForm.create({
         className: 'ol-search',
@@ -180,25 +172,18 @@ table.ol-grid-table > td {
         autoClear: true,
         autoCollapse: true,
         canCollapse: true,
-        fields: searchFields
+        fields: searchProvider.fields
     });
 
 
     form.on("change", (args: {
-        value: BingGeocode.Request & {
-            bounded: boolean
-        }
+        value: Geocoder.Request
     }) => {
 
         if (!args.value) return;
         console.log("search", args.value);
 
-        let searchArgs = searchProvider.getParameters({
-            bounded: args.value.bounded,
-            params: args.value
-        }, map);
-
-        searchProvider.execute(searchArgs).then(results => {
+        searchProvider.execute(args.value).then(results => {
 
             let toSrs = map.getView().getProjection();
 
@@ -212,7 +197,7 @@ table.ol-grid-table > td {
                 }
                 if (r.extent) {
                     let feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
-                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 50 });
                 }
                 return true;
             });

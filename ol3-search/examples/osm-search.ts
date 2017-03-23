@@ -18,8 +18,6 @@ export function run() {
 }
     `);
 
-    let searchProvider = new Geocoder();
-
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
     let mapContainer = document.getElementsByClassName("map")[0];
@@ -69,50 +67,25 @@ export function run() {
     });
     map.addLayer(vector);
 
+    let searchProvider = new Geocoder({
+        count: 1,
+        map: map
+    });
+
     let form = SearchForm.create({
         className: 'ol-search',
         position: 'top right',
         expanded: true,
         title: "OSM Search",
-        fields: [
-            {
-                name: "q",
-                alias: "*",
-                default: "LAX",
-                length: 50
-            },
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                type: "boolean",
-                default: true
-            }
-        ]
+        fields: searchProvider.fields
     });
 
     form.on("change", (args: {
-        value: {
-            q: string;
-            bounded: boolean;
-        }
+        value: Geocoder.Request
     }) => {
         if (!args.value) return;
 
-        let v = args.value;
-        let searchArgs = searchProvider.getParameters({
-            bounded: v.bounded,
-            params: {
-                q: v.q
-            }
-        }, map);
-
-        $.ajax({
-            url: searchArgs.url,
-            method: searchArgs.method || 'GET',
-            data: searchArgs.params,
-            dataType: searchArgs.dataType || 'json'
-        }).then(json => {
-            let results = searchProvider.handleResponse(json);
+        searchProvider.execute(args.value).then(results => {
             results.some(r => {
                 if (r.address) {
                     let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
@@ -127,8 +100,6 @@ export function run() {
                 }
                 return true;
             });
-        }).fail(() => {
-            console.error("geocoder failed");
         });
 
     });

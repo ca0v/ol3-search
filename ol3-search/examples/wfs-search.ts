@@ -53,8 +53,6 @@ table.ol-grid-table > td {
 
     `);
 
-    let searchProvider = new Geocoder();
-
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
     let mapContainer = document.getElementsByClassName("map")[0];
@@ -160,46 +158,37 @@ table.ol-grid-table > td {
         map.addLayer(vector);
     });
 
-    let searchFields = searchProvider.fields.concat([
-        {
-            name: "query",
-            alias: "Search For",
-            default: "",
-            length: 50
-        },
-        {
-            name: "bounded",
-            alias: "Current Extent?",
-            default: true
+    let searchProvider = new Geocoder({
+        url: 'http://localhost:8080/geoserver/ips/wfs',
+        count: 1,
+        map: map,
+        params: {
+            featureNS: 'http://inforpublicsector.com/geoserver',
+            featurePrefix: 'ips',
+            featureTypes: ['ADDRESS'],
+            searchNames: 'CITY,STNAME,STATE'.split(','),
+            propertyNames: ['STNAME', 'GEOM']
         }
-    ]);
-
-    searchFields[0].default = "LAX";
+    });
 
     let form = SearchForm.create({
         className: 'ol-search',
         position: 'top right',
         expanded: true,
-        title: "WFS Search",
+        title: "IPS Address Search",
         showLabels: false,
         autoClear: true,
         autoCollapse: true,
         canCollapse: true,
-        fields: searchFields
+        fields: searchProvider.fields
     });
 
 
     let search = (value: any, bounded: boolean) => {
-        let searchArgs = searchProvider.getParameters({
-            query: value.query,
-            bounded: bounded,
-            count: 1,
-            params: value
-        }, map);
 
         let toSrs = map.getView().getProjection();
 
-        searchProvider.execute(searchArgs)
+        searchProvider.execute(value)
             .then(results => {
                 if (!results.length) {
                     // try again without extent limitation

@@ -36,8 +36,6 @@ export function run() {
 }
     `);
 
-    let searchProvider = new Geocoder();
-
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
     let mapContainer = document.getElementsByClassName("map")[0];
@@ -120,41 +118,27 @@ export function run() {
     });
     map.addLayer(vector);
 
+    let searchProvider = new Geocoder({
+        map: map,
+        count: 1
+    });
+
     let form = SearchForm.create({
         className: 'ol-search',
         position: 'top right',
         expanded: true,
         title: "Google Search",
-        fields: [
-            {
-                name: "address",
-                alias: "Location",
-                default: "LAX",
-                length: 50
-            },
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                default: true
-            }
-        ]
+        fields: searchProvider.fields
     });
 
     form.on("change", (args: {
-        value: Geocoder.Request & {
-            bounded: boolean
-        }
+        value: Geocoder.Request
     }) => {
         if (!args.value) return;
 
-        let searchArgs = searchProvider.getParameters({
-            bounded: args.value.bounded,
-            params: args.value
-        }, map);
+        let toSrs = map.getView().getProjection();
 
-        searchProvider.execute(searchArgs).then(results => {
-
-            let toSrs = map.getView().getProjection();
+        searchProvider.execute(args.value).then(results => {
 
             results.some(r => {
                 console.log(r);

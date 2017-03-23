@@ -54,8 +54,6 @@ table.ol-grid-table > td {
     `);
 
 
-    let searchProvider = new Geocoder();
-
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
     let mapContainer = document.getElementsByClassName("map")[0];
@@ -161,15 +159,10 @@ table.ol-grid-table > td {
         map.addLayer(vector);
     });
 
-    let searchFields = searchProvider.fields.concat([
-        {
-            name: "bounded",
-            alias: "Current Extent?",
-            default: true
-        }
-    ]);
-
-    searchFields[0].default = "LAX";
+    let searchProvider = new Geocoder({
+        map: map,
+        count: 1,
+    });
 
     let form = SearchForm.create({
         className: 'ol-search',
@@ -180,24 +173,16 @@ table.ol-grid-table > td {
         autoClear: true,
         autoCollapse: true,
         canCollapse: true,
-        fields: searchFields
+        fields: searchProvider.fields
     });
 
-
     form.on("change", (args: {
-        value: Geocoder.Request & {
-            bounded: boolean
-        }
+        value: Geocoder.Request
     }) => {
         if (!args.value) return;
         console.log("search", args.value);
 
-        let searchArgs = searchProvider.getParameters({
-            bounded: args.value.bounded,
-            params: args.value
-        }, map);
-
-        searchProvider.execute(searchArgs).then(results => {
+        searchProvider.execute(args.value).then(results => {
 
             let toSrs = map.getView().getProjection();
 

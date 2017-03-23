@@ -9,14 +9,13 @@ import { Request, Result, SearchField, Geocoder } from "./index";
 export module LayerGeocode {
 
     export interface Request {
-        map: ol.Map;
-        layers: ol.layer.Vector[];
+        query: string;
+        layers?: ol.layer.Vector[];
         searchNames: string[];
-        propertyNames: string[];
+        propertyNames?: string[];
     }
 
     export interface Result {
-
     }
 
     export interface Response {
@@ -39,20 +38,28 @@ export class LayerGeocode implements Geocoder<LayerGeocode.Request, LayerGeocode
     }
 
     get fields(): SearchField[] {
-        return [];
-    }
-
-    getParameters(options: Request<LayerGeocode.Request>, map?: ol.Map) {
-        defaults(options.params, this.options.params);
-        defaults(options, this.options);
-        return options;
+        return [
+            {
+                name: "query",
+                alias: "Search For",
+                default: "",
+                length: 50
+            },
+            {
+                name: "bounded",
+                alias: "Current Extent?",
+                default: true
+            }
+        ];
     }
 
     /**
      * Performs the actual search
      */
-    execute(options: Request<LayerGeocode.Request>): LayerGeocode.Response {
-        let searchText = options.query;
+    execute(params: LayerGeocode.Request) {
+        let options = this.getParameters({ params: params }, this.options.map);
+        let d = $.Deferred<Result<LayerGeocode.Result>[]>();
+        let searchText = options.params.query;
         let results = <ol.Feature[]>[];
         options.params.layers.forEach(l => {
             let features = l.getSource().getFeatures();
@@ -68,13 +75,20 @@ export class LayerGeocode implements Geocoder<LayerGeocode.Request, LayerGeocode
             // TODO: remove all but the best matches
         }
         results = results.map(f => f.clone());
-        results.forEach(f => f.getGeometry().transform(options.params.map.getView().getProjection(), "EPSG:4326"));
-        return { features: results };
+        results.forEach(f => f.getGeometry().transform(options.map.getView().getProjection(), "EPSG:4326"));
+        d.resolve(this.handleResponse({ features: results }));
+        return d;
     }
 
-    handleResponse(response: LayerGeocode.Response): Result<LayerGeocode.Result>[] {
+    private getParameters(options: Request<LayerGeocode.Request>, map?: ol.Map) {
+        defaults(options.params, this.options.params);
+        defaults(options, this.options);
+        return options;
+    }
 
-        let asExtent = (r: ol.Feature) =>  ol.geom.Polygon.fromExtent(r.getGeometry().getExtent());
+    private handleResponse(response: LayerGeocode.Response): Result<LayerGeocode.Result>[] {
+
+        let asExtent = (r: ol.Feature) => ol.geom.Polygon.fromExtent(r.getGeometry().getExtent());
 
         return response.features.map(f => {
             let [lon, lat] = ol.extent.getCenter(f.getGeometry().getExtent());

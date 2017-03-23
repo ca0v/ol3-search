@@ -16,6 +16,7 @@ export interface Result<T> {
 }
 
 export interface Request<T> {
+    map?: ol.Map;
     url?: string;
     method?: string;
     dataType?: string;
@@ -27,7 +28,7 @@ export interface Request<T> {
     count?: number;
     extent?: ol.Extent;
     bounded?: boolean;
-    params: T
+    params?: T
 }
 
 export interface SearchField {
@@ -52,7 +53,5 @@ export interface SearchField {
 
 export interface Geocoder<TRequest, TResult> {
     fields: SearchField[];
-    getParameters(options: Request<TRequest>, map?: ol.Map): Request<TRequest>;
-    handleResponse(response: any): Result<TResult>[];
-    execute(options: Request<TRequest>): JQueryPromise<Result<TResult>[]>;
+    execute(options: TRequest): JQueryPromise<Result<TResult>[]>;
 }

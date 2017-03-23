@@ -121,7 +121,7 @@ export interface BingGeocodeOptions extends Request<BingGeocode.Request> {
 
 export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Resource> {
 
-    private options: BingGeocodeOptions;
+    public options: BingGeocodeOptions;
 
     static DEFAULT_OPTIONS = <BingGeocodeOptions>{
         url: '//dev.virtualearth.net/REST/v1/Locations',
@@ -129,10 +129,8 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         dataType: 'jsonp',
         method: 'GET',
         params: {
-            query: '',
-            key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg',
             includeNeighborhood: 0,
-            maxResults: 1,
+            maxResults: 5,
             userRegion: 'US'
         }
     }
@@ -146,10 +144,18 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
             name: "query",
             alias: "Location",
             length: 50
-        }]
+        },
+        {
+            name: "bounded",
+            alias: "Current Extent?",
+            default: true
+        }
+        ]
     }
 
-    execute(options: Request<BingGeocode.Request>) {
+    execute(params: BingGeocode.Request) {
+        let options = this.getParameters({ params: params }, this.options.map);
+
         let d = $.Deferred<Result<BingGeocode.Resource>[]>();
         $.ajax({
             url: options.url,
@@ -159,15 +165,18 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
-            .fail(() => {
-                console.error("geocoder failed");
-            });
+            .fail(() => d.reject("geocoder failed"));
+
         return d;
     }
 
-    getParameters(options: Request<BingGeocode.Request>, map?: ol.Map) {
+    private getParameters(options: Request<BingGeocode.Request>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
+
+        options.params.key = options.params.key || options.key;
+        options.params.maxResults = options.params.maxResults || options.count;
+        options.params.query = options.params.query || options.query;
 
         if (map && options.bounded) {
             let extent = map.getView().calculateExtent(map.getSize());
@@ -180,16 +189,17 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         return options;
     }
 
-    handleResponse(response: BingGeocode.Response): Result<BingGeocode.Resource>[] {
+    private handleResponse(response: BingGeocode.Response): Result<BingGeocode.Resource>[] {
 
         let asExtent = (r: BingGeocode.Resource) => {
             let v = r.bbox;
             return ol.geom.Polygon.fromExtent([v[1], v[0], v[3], v[2]]);
         };
 
-        return response.resourceSets.map(resourceSet => {
+        let results: Result<BingGeocode.Resource>[] = [];
 
-            return resourceSet.resources.map(result => ({
+        response.resourceSets.forEach(resourceSet => {
+            let resultSet = resourceSet.resources.map(result => ({
                 extent: asExtent(result),
                 title: result.name,
                 lon: result.point.coordinates[1],
@@ -204,7 +214,12 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
                 },
                 original: result
             }));
-        })[0];
+
+            results = results.concat(resultSet);
+
+        });
+
+        return results;
     }
 
 }

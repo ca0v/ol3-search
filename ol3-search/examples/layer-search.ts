@@ -158,70 +158,43 @@ table.ol-grid-table > td {
     }).then(() => map.addLayer(vector));
 
     let searchProvider = new Geocoder({
+        count: 1,
+        map: map,
         params: {
-            map: map,
             layers: [],
             searchNames: ["STATE_ABBR", "STATE_NAME", "SUB_REGION"],
             propertyNames: ["STATE_NAME", "STATE_ABBR", "SUB_REGION"]
         }
     });
 
-    let searchFields = searchProvider.fields.concat([
-        {
-            name: "query",
-            alias: "Search For",
-            default: "",
-            length: 50
-        },
-        {
-            name: "bounded",
-            alias: "Current Extent?",
-            default: true
-        }
-    ]);
-
-    searchFields[0].default = "LAX";
-
     let form = SearchForm.create({
         className: 'ol-search',
         position: 'top right',
         expanded: true,
-        title: "WFS Search",
+        title: "Layer Search",
         showLabels: false,
         autoClear: true,
         autoCollapse: true,
         canCollapse: true,
-        fields: searchFields
+        fields: searchProvider.fields
     });
 
-
-    let search = (value: any, bounded: boolean) => {
-        let searchArgs = searchProvider.getParameters({
-            query: value.query,
-            bounded: bounded,
-            count: 1,
-            params: value
-        }, map);
-
-        process(searchProvider.execute(searchArgs));
-    }
-
-    let process = (json: any) => {
-        let results = searchProvider.handleResponse(json);
-        return results.some(r => {
-            console.log(r);
-            if (r.address) {
-                let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
-                let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                feature.set("text", r.title);
-                source.addFeature(feature);
-            }
-            if (r.extent) {
-                let feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
-                navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
-            }
-            return true;
-        });
+    let search = (params: Geocoder.Request, bounded: boolean) => {
+        searchProvider.execute(params).then(results =>
+            results.some(r => {
+                console.log(r);
+                if (r.address) {
+                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
+                    let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                    feature.set("text", r.title);
+                    source.addFeature(feature);
+                }
+                if (r.extent) {
+                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
+                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                }
+                return true;
+            }));
     }
 
     form.on("change", (args: {

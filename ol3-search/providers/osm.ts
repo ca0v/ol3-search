@@ -1,6 +1,6 @@
 import $ = require("jquery");
 import ol = require("openlayers");
-import { defaults } from "ol3-fun/ol3-fun/common";
+import { defaults } from "ol3-fun";
 import { Geocoder, Request, Result, SearchField } from "./index";
 
 export module OpenStreetGeocode {
@@ -83,7 +83,6 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
         dataType: 'json',
         method: 'GET',
         params: <OpenStreetGeocode.Request>{
-            q: '',
             format: 'json',
             addressdetails: true,
             limit: 10,
@@ -116,6 +115,7 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
     }
 
     execute(params: OpenStreetGeocode.Request) {
+        params.q = params.q || params["query"];
         let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<OpenStreetGeocode.ResponseItem>[]>();
         $.ajax({
@@ -132,8 +132,12 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
 
     private getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map) {
 
-        defaults(options.params, this.options.params);
         defaults(options, this.options);
+
+        defaults(options.params, {
+            q: options.query,
+            limit: options.count,
+        }, this.options.params);
 
         if (!options.params.viewbox && map) {
             let extent = map.getView().calculateExtent(map.getSize());

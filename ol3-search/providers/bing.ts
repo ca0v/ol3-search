@@ -171,12 +171,14 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
     }
 
     private getParameters(options: Request<BingGeocode.Request>, map?: ol.Map) {
-        defaults(options.params, this.options.params);
+
         defaults(options, this.options);
 
-        options.params.key = options.params.key || options.key;
-        options.params.maxResults = options.params.maxResults || options.count;
-        options.params.query = options.params.query || options.query;
+        defaults(options.params, {
+            key: options.key,
+            maxResults: options.count,
+            query: options.query,
+        }, this.options.params);
 
         if (map && options.bounded) {
             let extent = map.getView().calculateExtent(map.getSize());

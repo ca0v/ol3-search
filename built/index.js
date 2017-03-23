@@ -1406,11 +1406,12 @@ define("ol3-search/providers/bing", ["require", "exports", "jquery", "openlayers
             return d;
         };
         BingGeocode.prototype.getParameters = function (options, map) {
-            ol3_fun_3.defaults(options.params, this.options.params);
             ol3_fun_3.defaults(options, this.options);
-            options.params.key = options.params.key || options.key;
-            options.params.maxResults = options.params.maxResults || options.count;
-            options.params.query = options.params.query || options.query;
+            ol3_fun_3.defaults(options.params, {
+                key: options.key,
+                maxResults: options.count,
+                query: options.query,
+            }, this.options.params);
             if (map && options.bounded) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
@@ -2252,6 +2253,7 @@ define("ol3-search/providers/google", ["require", "exports", "jquery", "openlaye
         });
         GoogleGeocode.prototype.execute = function (params) {
             var _this = this;
+            params.address = params.address || params["query"];
             var options = this.getParameters({ params: params }, this.options.map);
             var d = $.Deferred();
             $.ajax({
@@ -2266,11 +2268,15 @@ define("ol3-search/providers/google", ["require", "exports", "jquery", "openlaye
             return d;
         };
         GoogleGeocode.prototype.getParameters = function (options, map) {
-            options.url = options.url || this.options.url;
-            options.params.address = options.query || options.params.address || this.options.params.address;
-            options.params.key = options.key || options.params.key || this.options.params.key;
-            options.params.language = options.lang || options.params.language || this.options.params.language;
-            if (map && options.bounded) {
+            ol3_fun_5.defaults(options, this.options);
+            ol3_fun_5.defaults(options.params, {
+                address: options.query,
+                count: options.count,
+                key: options.key,
+                language: options.lang,
+                url: options.url
+            }, this.options.params);
+            if (map && options.bounded && !options.params.bounds) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
                 {
@@ -2934,10 +2940,122 @@ define("ol3-search/examples/mapquest-search", ["require", "exports", "openlayers
     }
     exports.run = run;
 });
-define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/layer", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_4, ol3_symbolizer_5, ol3_search_5, layer_2, ol3_fun_11, ags_source_4) {
+define("ol3-search/providers/osm", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, $, ol, ol3_fun_11) {
+    "use strict";
+    var OpenStreetGeocode = (function () {
+        function OpenStreetGeocode(options) {
+            this.options = ol3_fun_11.defaults(options || {}, OpenStreetGeocode.DEFAULT_OPTIONS);
+        }
+        Object.defineProperty(OpenStreetGeocode.prototype, "fields", {
+            get: function () {
+                return [
+                    {
+                        name: "q",
+                        alias: "*",
+                        default: "LAX",
+                        length: 50
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        type: "boolean",
+                        default: true
+                    }
+                ];
+            },
+            enumerable: true,
+            configurable: true
+        });
+        OpenStreetGeocode.prototype.execute = function (params) {
+            var _this = this;
+            params.q = params.q || params["query"];
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
+        OpenStreetGeocode.prototype.getParameters = function (options, map) {
+            ol3_fun_11.defaults(options, this.options);
+            ol3_fun_11.defaults(options.params, {
+                q: options.query,
+                limit: options.count,
+            }, this.options.params);
+            if (!options.params.viewbox && map) {
+                var extent = map.getView().calculateExtent(map.getSize());
+                var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
+                var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
+                var inSrs = map.getView().getProjection();
+                _c = ol.proj.transform([left, top_1], inSrs, "EPSG:4326"), left = _c[0], top_1 = _c[1];
+                _d = ol.proj.transform([right, bottom], inSrs, "EPSG:4326"), right = _d[0], bottom = _d[1];
+                options.params.viewbox = {
+                    bottom: bottom,
+                    top: top_1,
+                    left: left,
+                    right: right
+                };
+            }
+            if (options.params.countrycodes) {
+                options.params.countrycodes = options.params.countrycodes.join(",");
+            }
+            if (options.params.viewbox) {
+                var x = options.params.viewbox;
+                options.params.viewbox = [x.left, x.top, x.right, x.bottom].map(function (v) { return v.toFixed(5); }).join(",");
+            }
+            Object.keys(options.params).filter(function (k) { return typeof options.params[k] === "boolean"; }).forEach(function (k) {
+                options.params[k] = options.params[k] ? "1" : "0";
+            });
+            return options;
+            var _c, _d;
+        };
+        OpenStreetGeocode.prototype.handleResponse = function (response) {
+            var asExtent = function (r) {
+                var _a = r.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
+                return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
+            };
+            return response.sort(function (v) { return v.importance || 1; }).map(function (result) { return ({
+                title: result.display_name,
+                lon: parseFloat(result.lon),
+                lat: parseFloat(result.lat),
+                extent: asExtent(result),
+                address: {
+                    name: result.address.neighbourhood || '',
+                    road: result.address.road || '',
+                    postcode: result.address.postcode,
+                    city: result.address.city || result.address.town,
+                    state: result.address.state,
+                    country: result.address.country
+                },
+                original: result
+            }); });
+        };
+        return OpenStreetGeocode;
+    }());
+    OpenStreetGeocode.DEFAULT_OPTIONS = {
+        url: '//nominatim.openstreetmap.org/search/',
+        dataType: 'json',
+        method: 'GET',
+        params: {
+            format: 'json',
+            addressdetails: true,
+            limit: 10,
+            countrycodes: ['US'],
+            'accept-language': 'en-US'
+        }
+    };
+    exports.OpenStreetGeocode = OpenStreetGeocode;
+});
+define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/bing", "ol3-search/providers/google", "ol3-search/providers/osm", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_4, ol3_symbolizer_5, ol3_search_5, bing_2, google_2, osm_1, ol3_fun_12, ags_source_4) {
     "use strict";
     function run() {
-        ol3_fun_11.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        ol3_fun_12.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -3021,58 +3139,66 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "b
                     layers: [layer]
                 });
                 grid.on("feature-click", function (args) {
-                    ol3_fun_11.navigation.zoomToFeature(map, args.feature);
+                    ol3_fun_12.navigation.zoomToFeature(map, args.feature);
                 });
                 grid.on("feature-hover", function (args) {
                     // TODO: highlight args.feature
                 });
             });
-            searchProvider.options.params.layers = layers;
         }).then(function () { return map.addLayer(vector); });
-        var searchProvider = new layer_2.LayerGeocode({
-            params: {
+        var providers = [
+            new bing_2.BingGeocode({
+                count: 1,
                 map: map,
-                layers: [],
-                searchNames: ["STATE_ABBR", "STATE_NAME", "SUB_REGION"],
-                propertyNames: ["STATE_NAME", "STATE_ABBR", "SUB_REGION"]
-            }
-        });
-        var searchFields = searchProvider.fields.concat([
-            {
-                name: "query",
-                alias: "Search For",
-                default: "",
-                length: 50
-            },
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                default: true
-            }
-        ]);
-        searchFields[0].default = "LAX";
+                key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg'
+            }),
+            new google_2.GoogleGeocode({
+                count: 1,
+                map: map
+            }),
+            new osm_1.OpenStreetGeocode({
+                count: 1,
+                map: map
+            })
+        ];
         var form = ol3_search_5.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
             expanded: true,
-            title: "WFS Search",
+            title: "LAX Search",
             showLabels: false,
             autoClear: true,
             autoCollapse: true,
             canCollapse: true,
-            fields: searchFields
+            fields: [{
+                    name: "query",
+                    alias: "Location",
+                    default: "LAX",
+                    length: 50
+                }]
         });
         var search = function (value, bounded) {
-            var searchArgs = searchProvider.getParameters({
-                query: value.query,
-                bounded: bounded,
-                count: 1,
-                params: value
-            }, map);
-            process(searchProvider.execute(searchArgs));
+            providers[0].execute(value).then(function (results) {
+                if (results.length) {
+                    process(results);
+                    // switch primary provider
+                    providers.push(providers.shift());
+                }
+                else {
+                    // run all the remaining providers at once
+                    providers.filter(function (v, i) { return i > 0; }).forEach(function (provider) {
+                        provider.execute(value).then(function (results) {
+                            process(results);
+                        });
+                    });
+                }
+            }).fail(function () {
+                // switch primary provider
+                providers.push(providers.shift());
+                search(value, bounded);
+            });
         };
-        var process = function (json) {
-            var results = searchProvider.handleResponse(json);
+        var process = function (results) {
             return results.some(function (r) {
                 console.log(r);
                 if (r.address) {
@@ -3083,7 +3209,7 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "b
                 }
                 if (r.extent) {
                     var feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
-                    ol3_fun_11.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                    ol3_fun_12.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
             });
@@ -3098,119 +3224,10 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "b
     }
     exports.run = run;
 });
-define("ol3-search/providers/osm", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, $, ol, common_3) {
-    "use strict";
-    var OpenStreetGeocode = (function () {
-        function OpenStreetGeocode(options) {
-            this.options = common_3.defaults(options || {}, OpenStreetGeocode.DEFAULT_OPTIONS);
-        }
-        Object.defineProperty(OpenStreetGeocode.prototype, "fields", {
-            get: function () {
-                return [
-                    {
-                        name: "q",
-                        alias: "*",
-                        default: "LAX",
-                        length: 50
-                    },
-                    {
-                        name: "bounded",
-                        alias: "Current Extent?",
-                        type: "boolean",
-                        default: true
-                    }
-                ];
-            },
-            enumerable: true,
-            configurable: true
-        });
-        OpenStreetGeocode.prototype.execute = function (params) {
-            var _this = this;
-            var options = this.getParameters({ params: params }, this.options.map);
-            var d = $.Deferred();
-            $.ajax({
-                url: options.url,
-                method: options.method || 'GET',
-                data: options.params,
-                dataType: options.dataType || 'json',
-                jsonp: options.callbackName
-            })
-                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
-                .fail(function () { return d.reject("geocoder failed"); });
-            return d;
-        };
-        OpenStreetGeocode.prototype.getParameters = function (options, map) {
-            common_3.defaults(options.params, this.options.params);
-            common_3.defaults(options, this.options);
-            if (!options.params.viewbox && map) {
-                var extent = map.getView().calculateExtent(map.getSize());
-                var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
-                var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
-                var inSrs = map.getView().getProjection();
-                _c = ol.proj.transform([left, top_1], inSrs, "EPSG:4326"), left = _c[0], top_1 = _c[1];
-                _d = ol.proj.transform([right, bottom], inSrs, "EPSG:4326"), right = _d[0], bottom = _d[1];
-                options.params.viewbox = {
-                    bottom: bottom,
-                    top: top_1,
-                    left: left,
-                    right: right
-                };
-            }
-            if (options.params.countrycodes) {
-                options.params.countrycodes = options.params.countrycodes.join(",");
-            }
-            if (options.params.viewbox) {
-                var x = options.params.viewbox;
-                options.params.viewbox = [x.left, x.top, x.right, x.bottom].map(function (v) { return v.toFixed(5); }).join(",");
-            }
-            Object.keys(options.params).filter(function (k) { return typeof options.params[k] === "boolean"; }).forEach(function (k) {
-                options.params[k] = options.params[k] ? "1" : "0";
-            });
-            return options;
-            var _c, _d;
-        };
-        OpenStreetGeocode.prototype.handleResponse = function (response) {
-            var asExtent = function (r) {
-                var _a = r.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
-                return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
-            };
-            return response.sort(function (v) { return v.importance || 1; }).map(function (result) { return ({
-                title: result.display_name,
-                lon: parseFloat(result.lon),
-                lat: parseFloat(result.lat),
-                extent: asExtent(result),
-                address: {
-                    name: result.address.neighbourhood || '',
-                    road: result.address.road || '',
-                    postcode: result.address.postcode,
-                    city: result.address.city || result.address.town,
-                    state: result.address.state,
-                    country: result.address.country
-                },
-                original: result
-            }); });
-        };
-        return OpenStreetGeocode;
-    }());
-    OpenStreetGeocode.DEFAULT_OPTIONS = {
-        url: '//nominatim.openstreetmap.org/search/',
-        dataType: 'json',
-        method: 'GET',
-        params: {
-            q: '',
-            format: 'json',
-            addressdetails: true,
-            limit: 10,
-            countrycodes: ['US'],
-            'accept-language': 'en-US'
-        }
-    };
-    exports.OpenStreetGeocode = OpenStreetGeocode;
-});
-define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_symbolizer_6, ol3_search_6, osm_1, ol3_fun_12) {
+define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_symbolizer_6, ol3_search_6, osm_2, ol3_fun_13) {
     "use strict";
     function run() {
-        ol3_fun_12.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
+        ol3_fun_13.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -3254,7 +3271,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "b
             }
         });
         map.addLayer(vector);
-        var searchProvider = new osm_1.OpenStreetGeocode({
+        var searchProvider = new osm_2.OpenStreetGeocode({
             count: 1,
             map: map
         });
@@ -3279,7 +3296,7 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "b
                     if (r.extent) {
                         r.extent.transform("EPSG:4326", map.getView().getProjection());
                         var feature = new ol.Feature(r.extent);
-                        ol3_fun_12.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        ol3_fun_13.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });
@@ -3337,12 +3354,12 @@ define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "b
     * Spatial
     * Within
  */
-define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_13) {
+define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_14) {
     "use strict";
     var olFormatFilter = ol.format["filter"];
     var WfsGeocode = (function () {
         function WfsGeocode(options) {
-            this.options = ol3_fun_13.defaults(options || {}, WfsGeocode.DEFAULT_OPTIONS);
+            this.options = ol3_fun_14.defaults(options || {}, WfsGeocode.DEFAULT_OPTIONS);
         }
         Object.defineProperty(WfsGeocode.prototype, "fields", {
             get: function () {
@@ -3380,8 +3397,8 @@ define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_c
             return d;
         };
         WfsGeocode.prototype.getParameters = function (options, map) {
-            ol3_fun_13.defaults(options.params, this.options.params);
-            ol3_fun_13.defaults(options, this.options);
+            ol3_fun_14.defaults(options.params, this.options.params);
+            ol3_fun_14.defaults(options, this.options);
             var format = new ol.format.WFS();
             var searchText = options.params.query.replace(/ /g, "*");
             var filters = options.params.searchNames.map(function (searchName) { return olFormatFilter.like(searchName, "*" + searchText + "*"); });
@@ -3449,10 +3466,10 @@ define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_c
     };
     exports.WfsGeocode = WfsGeocode;
 });
-define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/wfs", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_5, ol3_symbolizer_7, ol3_search_7, wfs_1, ol3_fun_14, ags_source_5) {
+define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/wfs", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_5, ol3_symbolizer_7, ol3_search_7, wfs_1, ol3_fun_15, ags_source_5) {
     "use strict";
     function run() {
-        ol3_fun_14.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        ol3_fun_15.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -3536,7 +3553,7 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "b
                     layers: [layer]
                 });
                 grid.on("feature-click", function (args) {
-                    ol3_fun_14.navigation.zoomToFeature(map, args.feature);
+                    ol3_fun_15.navigation.zoomToFeature(map, args.feature);
                 });
                 grid.on("feature-hover", function (args) {
                     // TODO: highlight args.feature
@@ -3586,7 +3603,7 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "b
                     }
                     if (r.extent) {
                         var feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
-                        ol3_fun_14.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        ol3_fun_15.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });

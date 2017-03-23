@@ -1094,9 +1094,6 @@ declare module "ol3-search/providers/mapquest" {
 declare module "ol3-search/examples/mapquest-search" {
     export function run(): void;
 }
-declare module "ol3-search/examples/ol3-search" {
-    export function run(): void;
-}
 declare module "ol3-search/providers/osm" {
     import { Geocoder, Request, Result, SearchField } from "./index";
     export module OpenStreetGeocode {
@@ -1177,6 +1174,9 @@ declare module "ol3-search/providers/osm" {
         private getParameters(options, map?);
         private handleResponse(response);
     }
+}
+declare module "ol3-search/examples/ol3-search" {
+    export function run(): void;
 }
 declare module "ol3-search/examples/osm-search" {
     export function run(): void;

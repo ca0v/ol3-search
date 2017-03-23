@@ -4,9 +4,12 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { LayerGeocode as Geocoder } from "../providers/layer";
+import { BingGeocode } from "../providers/bing";
+import { GoogleGeocode } from "../providers/google";
+import { OpenStreetGeocode } from "../providers/osm";
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
+import { Geocoder, Request, Result, SearchField } from "../providers/index";
 
 export function run() {
 
@@ -154,60 +157,63 @@ table.ol-grid-table > td {
             });
 
         });
-        searchProvider.options.params.layers = layers;
     }).then(() => map.addLayer(vector));
 
-    let searchProvider = new Geocoder({
-        params: {
+    let providers = <Array<Geocoder<any, any>>>[
+        new BingGeocode({
+            count: 1,
             map: map,
-            layers: [],
-            searchNames: ["STATE_ABBR", "STATE_NAME", "SUB_REGION"],
-            propertyNames: ["STATE_NAME", "STATE_ABBR", "SUB_REGION"]
-        }
-    });
-
-    let searchFields = searchProvider.fields.concat([
-        {
-            name: "query",
-            alias: "Search For",
-            default: "",
-            length: 50
-        },
-        {
-            name: "bounded",
-            alias: "Current Extent?",
-            default: true
-        }
-    ]);
-
-    searchFields[0].default = "LAX";
+            key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg'
+        }),
+        new GoogleGeocode({
+            count: 1,
+            map: map
+        }),
+        new OpenStreetGeocode({
+            count: 1,
+            map: map
+        })];
 
     let form = SearchForm.create({
         className: 'ol-search',
         position: 'top right',
         expanded: true,
-        title: "WFS Search",
+        title: "LAX Search",
         showLabels: false,
         autoClear: true,
         autoCollapse: true,
         canCollapse: true,
-        fields: searchFields
+        fields: [{
+            name: "query",
+            alias: "Location",
+            default: "LAX",
+            length: 50
+        }]
     });
 
 
-    let search = (value: any, bounded: boolean) => {
-        let searchArgs = searchProvider.getParameters({
-            query: value.query,
-            bounded: bounded,
-            count: 1,
-            params: value
-        }, map);
-
-        process(searchProvider.execute(searchArgs));
+    let search = (value: { query: string }, bounded: boolean) => {
+        providers[0].execute(value).then(results => {
+            if (results.length) {
+                process(results);
+                // switch primary provider
+                providers.push(providers.shift());
+            } else {
+                // run all the remaining providers at once
+                providers.filter((v, i) => i > 0).forEach(provider => {
+                    provider.execute(value).then(results => {
+                        process(results);
+                    });
+                })
+            }
+        }).fail(() => {
+            // switch primary provider
+            providers.push(providers.shift());
+            search(value, bounded);
+        });
     }
 
-    let process = (json: any) => {
-        let results = searchProvider.handleResponse(json);
+    let process = (results: Result<any>[]) => {
         return results.some(r => {
             console.log(r);
             if (r.address) {

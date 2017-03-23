@@ -118,6 +118,7 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
     }
 
     execute(params: GoogleGeocode.Request) {
+        params.address = params.address || params["query"];
         let options = this.getParameters({ params: params }, this.options.map);
 
         let d = $.Deferred<Result<GoogleGeocode.ResponseItem>[]>();
@@ -130,18 +131,23 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
         })
             .then(json => d.resolve(this.handleResponse(json)))
             .fail(() => d.reject("geocoder failed"));
-            
+
         return d;
     }
 
     private getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map) {
-        options.url = options.url || this.options.url;
 
-        options.params.address = options.query || options.params.address || this.options.params.address
-        options.params.key = options.key || options.params.key || this.options.params.key;
-        options.params.language = options.lang || options.params.language || this.options.params.language;
+        defaults(options, this.options);
 
-        if (map && options.bounded) {
+        defaults(options.params, <any>{
+            address: options.query,
+            count: options.count,
+            key: options.key,
+            language: options.lang,
+            url: options.url
+        }, this.options.params);
+
+        if (map && options.bounded && !options.params.bounds) {
             let extent = map.getView().calculateExtent(map.getSize());
             let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
             {

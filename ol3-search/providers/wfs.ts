@@ -9,6 +9,42 @@
  * Eliminate custom query params from other providers and rely on options.query
  * Replace option.bounded with option.extent
  * Add options.count
+ * 
+ * wfs filter options:
+    * and	
+    * or	
+    * not	
+    * bbox	
+    * intersects	
+    * within	
+    * equalTo	
+    * notEqualTo	
+    * lessThan	
+    * lessThanOrEqualTo	
+    * greaterThan	
+    * greaterThanOrEqualTo	
+    * isNull	
+    * between	
+    * like	
+    * And	
+    * Bbox	
+    * Comparison	
+    * ComparisonBinary	
+    * EqualTo	
+    * Filter	
+    * GreaterThan	
+    * GreaterThanOrEqualTo	
+    * Intersects	
+    * IsBetween	
+    * IsLike	
+    * IsNull	
+    * LessThan	
+    * LessThanOrEqualTo	
+    * Not	
+    * NotEqualTo	
+    * Or	
+    * Spatial	
+    * Within
  */
 
 import ol = require("openlayers");
@@ -23,9 +59,10 @@ export module WfsGeocode {
         // namespace prefix
         featurePrefix: string;
         // geometry types
-        featureTypes: ('Point' | 'MultiLineString' | 'MultiPolygon')[];
+        featureTypes: string[];
         // field to search
-        searchName: string;
+        searchNames: string[];
+        propertyNames: string[];
     }
 
     export interface WfsResult {
@@ -45,15 +82,17 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
     private options: WfsGeocodeOptions;
 
     static DEFAULT_OPTIONS = <WfsGeocodeOptions>{
-        url: '//dev.virtualearth.net/REST/v1/Locations',
+        url: 'http://localhost:8080/geoserver/cite/wfs',
         dataType: 'xml',
-        method: 'GET',
+        contentType: 'application/xml',
+        method: 'POST',
         params: {
             featureNS: "http://www.opengeospatial.net/cite",
             featurePrefix: "cite",
             count: 1,
-            featureTypes: ["Point", "MultiLineString", "MultiPolygon"],
-            searchName: "address"
+            featureTypes: ["addresses"],
+            searchNames: ["comment", "strname"],
+            propertyNames: ["comment", "strname", "geom"]
         }
     }
 
@@ -66,9 +105,20 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
     }
 
     getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map) {
+        defaults(options.params, this.options.params);
+        defaults(options, this.options);
+
         let format = new ol.format.WFS();
 
-        let filter = ol.format.filter.isLike(options.params.searchName, options.query);
+        let searchText = options.query.replace(/ /g, "*");
+        let filters = options.params.searchNames.map(searchName => ol.format.filter.like(searchName, `*${searchText}*`));
+        let filter = (filters.length > 1) ? ol.format.filter.or.apply(ol.format.filter.or, filters) : filter[0];
+
+        if (map && options.bounded && !options.extent) {
+            let extent = map.getView().calculateExtent(map.getSize());
+            let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
+            options.extent = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent();
+        }
 
         let getFeatureRequest = format.writeGetFeature({
             featureNS: options.params.featureNS,
@@ -78,17 +128,43 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             outputFormat: '',
             maxFeatures: <number>options.count,
             geometryName: 'geom',
-            propertyNames: [''],
+            propertyNames: options.params.propertyNames,
             bbox: <ol.Extent>options.extent,
             filter: filter
         });
 
-        options.params = getFeatureRequest;
+        options.params = getFeatureRequest.outerHTML;
 
         return options;
     }
 
     handleResponse(response: WfsGeocode.WfsResponse): Result<WfsGeocode.WfsResult>[] {
-        return [];
+        let format = new ol.format.WFS();
+        let result = format.readFeatures(response);
+
+        let asExtent = (r: ol.Feature) => {
+            let [lon1, lat1, lon2, lat2] = r.getGeometry().getExtent();
+
+            return new ol.geom.Polygon([[
+                [lat1, lon1],
+                [lat1, lon2],
+                [lat2, lon2],
+                [lat2, lon1],
+                [lat1, lon1]
+            ]]);
+        };
+
+        return result.map(f => {
+            let [lat, lon] = ol.extent.getCenter(f.getGeometry().getExtent());
+
+            return {
+                title: f.get(this.options.params.propertyNames[0]),
+                lat: lat,
+                lon: lon,
+                extent: asExtent(f),
+                address: <any>this.options.params.propertyNames.map(n => f.get(n)),
+                original: f
+            }
+        });
     }
 }

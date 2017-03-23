@@ -334,7 +334,7 @@ declare module "bower_components/ol3-symbolizer/index" {
 }
 declare module "ol3-search/providers/bing" {
     import ol = require("openlayers");
-    import { Request, Result, SearchField } from "./index";
+    import { Request, Result, SearchField, Geocoder } from "./index";
     export module BingGeocode {
         interface Request {
             query?: string;
@@ -393,7 +393,7 @@ declare module "ol3-search/providers/bing" {
     }
     export interface BingGeocodeOptions extends Request<BingGeocode.Request> {
     }
-    export class BingGeocode {
+    export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Resource> {
         private options;
         static DEFAULT_OPTIONS: BingGeocodeOptions;
         constructor(options?: BingGeocodeOptions);
@@ -1057,10 +1057,88 @@ declare module "ol3-search/providers/mapquest" {
 declare module "ol3-search/examples/mapquest-search" {
     export function run(): void;
 }
+declare module "ol3-search/providers/wfs" {
+    /**
+     * Searches a WFS service
+     * The current architecture assumes the response works nicely with $.ajax
+     * In this case the ol WFS request builder will produce XML so we'll need
+     * to extend that logic to work with XML.
+     * This would be a good time to wrap $.ajax in a module.
+     *
+     * Framework todos...
+     * Eliminate custom query params from other providers and rely on options.query
+     * Replace option.bounded with option.extent
+     * Add options.count
+     *
+     * wfs filter options:
+        * and
+        * or
+        * not
+        * bbox
+        * intersects
+        * within
+        * equalTo
+        * notEqualTo
+        * lessThan
+        * lessThanOrEqualTo
+        * greaterThan
+        * greaterThanOrEqualTo
+        * isNull
+        * between
+        * like
+        * And
+        * Bbox
+        * Comparison
+        * ComparisonBinary
+        * EqualTo
+        * Filter
+        * GreaterThan
+        * GreaterThanOrEqualTo
+        * Intersects
+        * IsBetween
+        * IsLike
+        * IsNull
+        * LessThan
+        * LessThanOrEqualTo
+        * Not
+        * NotEqualTo
+        * Or
+        * Spatial
+        * Within
+     */
+    import ol = require("openlayers");
+    import { Request, Result, SearchField, Geocoder } from "./index";
+    export module WfsGeocode {
+        interface WfsRequest {
+            featureNS: string;
+            featurePrefix: string;
+            featureTypes: string[];
+            searchNames: string[];
+            propertyNames: string[];
+        }
+        interface WfsResult {
+        }
+        interface WfsResponse {
+        }
+    }
+    export interface WfsGeocodeOptions extends Request<WfsGeocode.WfsRequest> {
+    }
+    export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.WfsResult> {
+        private options;
+        static DEFAULT_OPTIONS: WfsGeocodeOptions;
+        constructor(options?: WfsGeocodeOptions);
+        readonly fields: SearchField[];
+        getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map): Request<WfsGeocode.WfsRequest>;
+        handleResponse(response: WfsGeocode.WfsResponse): Result<WfsGeocode.WfsResult>[];
+    }
+}
+declare module "ol3-search/examples/ol3-search" {
+    export function run(): void;
+}
 declare module "ol3-search/providers/osm" {
     import ol = require("openlayers");
     import { Request, Result, SearchField } from "./index";
-    export module OpenStreet {
+    export module OpenStreetGeocode {
         interface Request {
             format?: "json";
             callback?: "define";
@@ -1127,21 +1205,21 @@ declare module "ol3-search/providers/osm" {
         }
         type Response = ResponseItem[];
     }
-    export interface GeocodeOptions extends Request<OpenStreet.Request> {
+    export interface OpenStreetGeocodeOptions extends Request<OpenStreetGeocode.Request> {
     }
-    export class OpenStreet {
-        static DEFAULT_OPTIONS: GeocodeOptions;
+    export class OpenStreetGeocode {
+        static DEFAULT_OPTIONS: OpenStreetGeocodeOptions;
         private options;
-        constructor(options?: GeocodeOptions);
+        constructor(options?: OpenStreetGeocodeOptions);
         readonly fields: SearchField[];
-        getParameters(options: Request<OpenStreet.Request>, map?: ol.Map): Request<OpenStreet.Request>;
-        handleResponse(response: OpenStreet.Response): Result<OpenStreet.ResponseItem>[];
+        getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map): Request<OpenStreetGeocode.Request>;
+        handleResponse(response: OpenStreetGeocode.Response): Result<OpenStreetGeocode.ResponseItem>[];
     }
-}
-declare module "ol3-search/examples/ol3-search" {
-    export function run(): void;
 }
 declare module "ol3-search/examples/osm-search" {
+    export function run(): void;
+}
+declare module "ol3-search/examples/wfs-search" {
     export function run(): void;
 }
 declare module "ol3-search/tests/index" {

@@ -87,7 +87,7 @@ export class OpenStreetGeocode {
             format: 'json',
             addressdetails: true,
             limit: 10,
-            countrycodes: ['us'],
+            countrycodes: ['US'],
             'accept-language': 'en-US'
         }
     }

@@ -87,7 +87,7 @@ export class MapQuestGeocode {
             format: 'json',
             addressdetails: 1,
             limit: 1,
-            countrycodes: '',
+            countrycodes: 'US',
             'accept-language': 'en-US'
         }
     };

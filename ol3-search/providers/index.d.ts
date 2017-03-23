@@ -19,6 +19,7 @@ export interface Request<T> {
     url?: string;
     method?: string;
     dataType?: string;
+    contentType?: string;
     callbackName?: string;
     query?: string;
     key?: string;

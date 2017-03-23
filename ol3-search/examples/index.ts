@@ -7,6 +7,7 @@ export function run() {
     google-search
     mapquest-search
     osm-search
+    wfs-search
     ol3-search
     `;
 

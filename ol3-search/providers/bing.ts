@@ -130,7 +130,8 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
             query: '',
             key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg',
             includeNeighborhood: 0,
-            maxResults: 1
+            maxResults: 1,
+            userRegion: 'US'
         }
     }
 

@@ -1321,7 +1321,7 @@ define("bower_components/ol3-symbolizer/index", ["require", "exports", "bower_co
     "use strict";
     return Symbolizer;
 });
-define("ol3-search/providers/bing", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_3) {
+define("ol3-search/providers/bing", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, $, ol, ol3_fun_3) {
     "use strict";
     var SampleError = {
         "authenticationResultCode": "NoCredentials",
@@ -1379,14 +1379,38 @@ define("ol3-search/providers/bing", ["require", "exports", "openlayers", "bower_
                         name: "query",
                         alias: "Location",
                         length: 50
-                    }];
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        default: true
+                    }
+                ];
             },
             enumerable: true,
             configurable: true
         });
+        BingGeocode.prototype.execute = function (params) {
+            var _this = this;
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
         BingGeocode.prototype.getParameters = function (options, map) {
             ol3_fun_3.defaults(options.params, this.options.params);
             ol3_fun_3.defaults(options, this.options);
+            options.params.key = options.params.key || options.key;
+            options.params.maxResults = options.params.maxResults || options.count;
+            options.params.query = options.params.query || options.query;
             if (map && options.bounded) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
@@ -1400,10 +1424,11 @@ define("ol3-search/providers/bing", ["require", "exports", "openlayers", "bower_
         BingGeocode.prototype.handleResponse = function (response) {
             var asExtent = function (r) {
                 var v = r.bbox;
-                return new ol.geom.Polygon([[[v[1], v[0]], [v[3], v[2]]]]);
+                return ol.geom.Polygon.fromExtent([v[1], v[0], v[3], v[2]]);
             };
-            return response.resourceSets.map(function (resourceSet) {
-                return resourceSet.resources.map(function (result) { return ({
+            var results = [];
+            response.resourceSets.forEach(function (resourceSet) {
+                var resultSet = resourceSet.resources.map(function (result) { return ({
                     extent: asExtent(result),
                     title: result.name,
                     lon: result.point.coordinates[1],
@@ -1418,7 +1443,9 @@ define("ol3-search/providers/bing", ["require", "exports", "openlayers", "bower_
                     },
                     original: result
                 }); });
-            })[0];
+                results = results.concat(resultSet);
+            });
+            return results;
         };
         return BingGeocode;
     }());
@@ -1428,10 +1455,8 @@ define("ol3-search/providers/bing", ["require", "exports", "openlayers", "bower_
         dataType: 'jsonp',
         method: 'GET',
         params: {
-            query: '',
-            key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg',
             includeNeighborhood: 0,
-            maxResults: 1,
+            maxResults: 5,
             userRegion: 'US'
         }
     };
@@ -2043,13 +2068,10 @@ define("bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source", ["requir
     }());
     exports.ArcGisVectorSourceFactory = ArcGisVectorSourceFactory;
 });
-define("ol3-search/examples/bing-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/bing", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_1, ol3_symbolizer_1, ol3_search_1, bing_1, ol3_fun_4, ags_source_1) {
+define("ol3-search/examples/bing-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/bing", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_1, ol3_symbolizer_1, ol3_search_1, bing_1, ol3_fun_4, ags_source_1) {
     "use strict";
     function run() {
         ol3_fun_4.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
-        //let searchProvider = new GoogleGeocode();
-        // let searchProvider = new OpenStreet();
-        var searchProvider = new bing_1.BingGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -2142,14 +2164,11 @@ define("ol3-search/examples/bing-search", ["require", "exports", "openlayers", "
         }).then(function () {
             map.addLayer(vector);
         });
-        var searchFields = searchProvider.fields.concat([
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                default: true
-            }
-        ]);
-        searchFields[0].default = "LAX";
+        var searchProvider = new bing_1.BingGeocode({
+            map: map,
+            count: 1,
+            key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg'
+        });
         var form = ol3_search_1.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
@@ -2159,47 +2178,35 @@ define("ol3-search/examples/bing-search", ["require", "exports", "openlayers", "
             autoClear: true,
             autoCollapse: true,
             canCollapse: true,
-            fields: searchFields
+            fields: searchProvider.fields
         });
         form.on("change", function (args) {
             if (!args.value)
                 return;
             console.log("search", args.value);
-            var searchArgs = searchProvider.getParameters({
-                bounded: args.value.bounded,
-                params: args.value
-            }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json',
-                jsonp: searchArgs.callbackName
-            }).then(function (json) {
-                var results = searchProvider.handleResponse(json);
+            searchProvider.execute(args.value).then(function (results) {
+                var toSrs = map.getView().getProjection();
                 results.some(function (r) {
                     console.log(r);
                     if (r.address) {
-                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs), lon = _a[0], lat = _a[1];
                         var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                         feature.set("text", r.title);
                         source.addFeature(feature);
                     }
                     if (r.extent) {
-                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
-                        ol3_fun_4.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
+                        ol3_fun_4.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 50 });
                     }
                     return true;
                 });
-            }).fail(function () {
-                console.error("geocoder failed");
             });
         });
         map.addControl(form);
     }
     exports.run = run;
 });
-define("ol3-search/providers/google", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_5) {
+define("ol3-search/providers/google", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, $, ol, ol3_fun_5) {
     "use strict";
     var GoogleMappingTable = {
         name: [
@@ -2226,15 +2233,38 @@ define("ol3-search/providers/google", ["require", "exports", "openlayers", "bowe
         }
         Object.defineProperty(GoogleGeocode.prototype, "fields", {
             get: function () {
-                return [{
+                return [
+                    {
                         name: "address",
                         alias: "Location",
+                        default: "LAX",
                         length: 50
-                    }];
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        default: true
+                    }
+                ];
             },
             enumerable: true,
             configurable: true
         });
+        GoogleGeocode.prototype.execute = function (params) {
+            var _this = this;
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
         GoogleGeocode.prototype.getParameters = function (options, map) {
             options.url = options.url || this.options.url;
             options.params.address = options.query || options.params.address || this.options.params.address;
@@ -2255,10 +2285,7 @@ define("ol3-search/providers/google", ["require", "exports", "openlayers", "bowe
             console.assert(response.status === "OK", "status OK");
             var asExtent = function (r) {
                 var v = r.geometry.viewport;
-                return new ol.geom.Polygon([[
-                        [v.southwest.lng, v.southwest.lat],
-                        [v.northeast.lng, v.northeast.lat]
-                    ]]);
+                return ol.geom.Polygon.fromExtent([v.southwest.lng, v.southwest.lat, v.northeast.lng, v.northeast.lat]);
             };
             var result = response.results.map(function (result) {
                 var returnValue = {
@@ -2300,11 +2327,10 @@ define("ol3-search/providers/google", ["require", "exports", "openlayers", "bowe
     };
     exports.GoogleGeocode = GoogleGeocode;
 });
-define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_2, ol3_search_2, google_1, ol3_fun_6) {
+define("ol3-search/examples/google-search", ["require", "exports", "openlayers", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/google", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_symbolizer_2, ol3_search_2, google_1, ol3_fun_6) {
     "use strict";
     function run() {
         ol3_fun_6.cssin("examples/googl-search", "\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n.ol-search table {\n    width: 100%;\n}\n\n.ol-search .input {\n    width: 100%;\n}\n\n.ol-search input[type=\"checkbox\"] {\n    width: auto;\n}\n    ");
-        var searchProvider = new google_1.GoogleGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -2379,56 +2405,36 @@ define("ol3-search/examples/google-search", ["require", "exports", "openlayers",
             }
         });
         map.addLayer(vector);
+        var searchProvider = new google_1.GoogleGeocode({
+            map: map,
+            count: 1
+        });
         var form = ol3_search_2.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
             expanded: true,
             title: "Google Search",
-            fields: [
-                {
-                    name: "address",
-                    alias: "Location",
-                    default: "LAX",
-                    length: 50
-                },
-                {
-                    name: "bounded",
-                    alias: "Current Extent?",
-                    default: true
-                }
-            ]
+            fields: searchProvider.fields
         });
         form.on("change", function (args) {
             if (!args.value)
                 return;
-            var searchArgs = searchProvider.getParameters({
-                bounded: args.value.bounded,
-                params: args.value
-            }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json'
-            }).then(function (json) {
-                var results = searchProvider.handleResponse(json);
+            var toSrs = map.getView().getProjection();
+            searchProvider.execute(args.value).then(function (results) {
                 results.some(function (r) {
+                    console.log(r);
                     if (r.address) {
-                        var geom = new ol.geom.Point([r.lon, r.lat]).transform("EPSG:4326", map.getView().getProjection());
-                        var feature_1 = new ol.Feature(geom);
-                        feature_1.set("text", r.original.formatted_address);
-                        r.original.types.forEach(function (t) { return feature_1.set(t, true); });
-                        source.addFeature(feature_1);
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs), lon = _a[0], lat = _a[1];
+                        var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                        feature.set("text", r.title);
+                        source.addFeature(feature);
                     }
                     if (r.extent) {
-                        r.extent.transform("EPSG:4326", map.getView().getProjection());
-                        var feature = new ol.Feature(r.extent);
+                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
                         ol3_fun_6.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });
-            }).fail(function () {
-                console.error("geocoder failed");
             });
         });
         map.addControl(form);
@@ -2440,7 +2446,7 @@ define("ol3-search/examples/index", ["require", "exports"], function (require, e
     function run() {
         var l = window.location;
         var path = "" + l.origin + l.pathname + "?run=ol3-search/examples/";
-        var labs = "\n    index\n    bing-search\n    google-search\n    mapquest-search\n    osm-search\n    wfs-search\n    ol3-search\n    ";
+        var labs = "\n    index\n    bing-search\n    google-search\n    layer-search\n    mapquest-search\n    osm-search\n    wfs-search\n    ol3-search\n    ";
         var styles = document.createElement("style");
         document.head.appendChild(styles);
         styles.innerText += "\n    #map {\n        display: none;\n    }\n    .test {\n        margin: 20px;\n    }\n    ";
@@ -2456,105 +2462,87 @@ define("ol3-search/examples/index", ["require", "exports"], function (require, e
     exports.run = run;
     ;
 });
-define("ol3-search/providers/mapquest", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_7) {
+/**
+ * Searches features in a layer
+ */
+define("ol3-search/providers/layer", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_7) {
     "use strict";
-    var SampleResponse = [{
-            "place_id": "96646138",
-            "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http:\/\/www.openstreetmap.org\/copyright",
-            "osm_type": "way",
-            "osm_id": "131190417",
-            "boundingbox": ["33.9311771", "33.9530757", "-118.4387216", "-118.3701912"],
-            "lat": "33.94203285",
-            "lon": "-118.410103847565",
-            "display_name": "Los Angeles International Airport, Service road S, Westchester, Playa del Rey, Los Angeles, Los Angeles County, California, 90245, United States of America",
-            "class": "aeroway",
-            "type": "aerodrome",
-            "importance": 0.50388163735627,
-            "icon": "http:\/\/ip-10-98-174-147.mq-us-east-1.ec2.aolcloud.net:8000\/nominatim\/v1\/images\/mapicons\/transport_airport2.p.20.png",
-            "address": {
-                "aerodrome": "Los Angeles International Airport",
-                "road": "Service road S",
-                "neighbourhood": "Westchester",
-                "suburb": "Playa del Rey",
-                "city": "Los Angeles",
-                "county": "Los Angeles County",
-                "state": "California",
-                "postcode": "90245",
-                "country": "United States of America",
-                "country_code": "us"
-            }
-        }];
-    var MapQuestGeocode = (function () {
-        function MapQuestGeocode(options) {
-            this.options = ol3_fun_7.defaults(options || {}, MapQuestGeocode.DEFAULT_OPTIONS);
+    var LayerGeocode = (function () {
+        function LayerGeocode(options) {
+            this.options = ol3_fun_7.defaults(options || {}, LayerGeocode.DEFAULT_OPTIONS);
         }
-        Object.defineProperty(MapQuestGeocode.prototype, "fields", {
+        Object.defineProperty(LayerGeocode.prototype, "fields", {
             get: function () {
-                return [{
-                        name: "q",
-                        alias: "Location",
+                return [
+                    {
+                        name: "query",
+                        alias: "Search For",
+                        default: "",
                         length: 50
-                    }];
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        default: true
+                    }
+                ];
             },
             enumerable: true,
             configurable: true
         });
-        MapQuestGeocode.prototype.getParameters = function (options, map) {
+        /**
+         * Performs the actual search
+         */
+        LayerGeocode.prototype.execute = function (params) {
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            var searchText = options.params.query;
+            var results = [];
+            options.params.layers.forEach(function (l) {
+                var features = l.getSource().getFeatures();
+                results = results.concat(features.filter(function (f) {
+                    return options.params.propertyNames.some(function (propertyName) {
+                        var value = f.get(propertyName);
+                        return -1 < value.indexOf(searchText);
+                    });
+                }));
+            });
+            if (0 < options.count && options.count < results.length) {
+            }
+            results = results.map(function (f) { return f.clone(); });
+            results.forEach(function (f) { return f.getGeometry().transform(options.map.getView().getProjection(), "EPSG:4326"); });
+            d.resolve(this.handleResponse({ features: results }));
+            return d;
+        };
+        LayerGeocode.prototype.getParameters = function (options, map) {
             ol3_fun_7.defaults(options.params, this.options.params);
             ol3_fun_7.defaults(options, this.options);
-            if (map && options.bounded && !options.params.viewbox) {
-                var extent = map.getView().calculateExtent(map.getSize());
-                var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
-                {
-                    var b = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent().map(function (v) { return v.toFixed(6); });
-                    options.params.viewbox = b[0] + "," + b[3] + "," + b[2] + "," + b[1];
-                    options.params.bounded = 0; // viewbox is just a suggestion
-                }
-            }
             return options;
         };
-        MapQuestGeocode.prototype.handleResponse = function (response) {
-            var asExtent = function (r) {
-                var v = r.boundingbox.map(function (v) { return parseFloat(v); });
-                return new ol.geom.Polygon([[[v[2], v[0]], [v[3], v[1]]]]);
-            };
-            return response.map(function (result) { return ({
-                title: result.display_name,
-                extent: asExtent(result),
-                lon: parseFloat(result.lon),
-                lat: parseFloat(result.lat),
-                address: {
-                    name: result.address.neighbourhood || '',
-                    road: result.address.road || '',
-                    postcode: result.address.postcode,
-                    city: result.address.city || result.address.town,
-                    state: result.address.state,
-                    country: result.address.country
-                },
-                original: result
-            }); });
+        LayerGeocode.prototype.handleResponse = function (response) {
+            var _this = this;
+            var asExtent = function (r) { return ol.geom.Polygon.fromExtent(r.getGeometry().getExtent()); };
+            return response.features.map(function (f) {
+                var _a = ol.extent.getCenter(f.getGeometry().getExtent()), lon = _a[0], lat = _a[1];
+                return {
+                    title: f.get(_this.options.params.propertyNames[0]),
+                    lat: lat,
+                    lon: lon,
+                    extent: asExtent(f),
+                    address: _this.options.params.propertyNames.map(function (n) { return f.get(n); }),
+                    original: f
+                };
+            });
         };
-        return MapQuestGeocode;
+        return LayerGeocode;
     }());
-    MapQuestGeocode.DEFAULT_OPTIONS = {
-        url: '//open.mapquestapi.com/nominatim/v1/search.php',
-        params: {
-            q: '',
-            key: 'X2CL1j8ekBW6g0U80tP0OogXILAQWkG4',
-            format: 'json',
-            addressdetails: 1,
-            limit: 1,
-            countrycodes: 'US',
-            'accept-language': 'en-US'
-        }
-    };
-    exports.MapQuestGeocode = MapQuestGeocode;
+    LayerGeocode.DEFAULT_OPTIONS = {};
+    exports.LayerGeocode = LayerGeocode;
 });
-define("ol3-search/examples/mapquest-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/mapquest", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_2, ol3_symbolizer_3, ol3_search_3, mapquest_1, ol3_fun_8, ags_source_2) {
+define("ol3-search/examples/layer-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/layer", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_2, ol3_symbolizer_3, ol3_search_3, layer_1, ol3_fun_8, ags_source_2) {
     "use strict";
     function run() {
         ol3_fun_8.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
-        var searchProvider = new mapquest_1.MapQuestGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -2644,45 +2632,31 @@ define("ol3-search/examples/mapquest-search", ["require", "exports", "openlayers
                     // TODO: highlight args.feature
                 });
             });
-        }).then(function () {
-            map.addLayer(vector);
-        });
-        var searchFields = searchProvider.fields.concat([
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                default: true
+            searchProvider.options.params.layers = layers;
+        }).then(function () { return map.addLayer(vector); });
+        var searchProvider = new layer_1.LayerGeocode({
+            count: 1,
+            map: map,
+            params: {
+                layers: [],
+                searchNames: ["STATE_ABBR", "STATE_NAME", "SUB_REGION"],
+                propertyNames: ["STATE_NAME", "STATE_ABBR", "SUB_REGION"]
             }
-        ]);
-        searchFields[0].default = "LAX";
+        });
         var form = ol3_search_3.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
             expanded: true,
-            title: "MapQuest Search",
+            title: "Layer Search",
             showLabels: false,
             autoClear: true,
             autoCollapse: true,
             canCollapse: true,
-            fields: searchFields
+            fields: searchProvider.fields
         });
-        form.on("change", function (args) {
-            if (!args.value)
-                return;
-            console.log("search", args.value);
-            var searchArgs = searchProvider.getParameters({
-                bounded: args.value.bounded,
-                params: args.value
-            }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json',
-                jsonp: searchArgs.callbackName
-            }).then(function (json) {
-                var results = searchProvider.handleResponse(json);
-                results.some(function (r) {
+        var search = function (params, bounded) {
+            searchProvider.execute(params).then(function (results) {
+                return results.some(function (r) {
                     console.log(r);
                     if (r.address) {
                         var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
@@ -2696,151 +2670,137 @@ define("ol3-search/examples/mapquest-search", ["require", "exports", "openlayers
                     }
                     return true;
                 });
-            }).fail(function () {
-                console.error("geocoder failed");
             });
+        };
+        form.on("change", function (args) {
+            if (!args.value)
+                return;
+            console.log("search", args.value);
+            search(args.value, args.value.bounded);
         });
         map.addControl(form);
     }
     exports.run = run;
 });
-/**
- * Searches a WFS service
- * The current architecture assumes the response works nicely with $.ajax
- * In this case the ol WFS request builder will produce XML so we'll need
- * to extend that logic to work with XML.
- * This would be a good time to wrap $.ajax in a module.
- *
- * Framework todos...
- * Eliminate custom query params from other providers and rely on options.query
- * Replace option.bounded with option.extent
- * Add options.count
- *
- * wfs filter options:
-    * and
-    * or
-    * not
-    * bbox
-    * intersects
-    * within
-    * equalTo
-    * notEqualTo
-    * lessThan
-    * lessThanOrEqualTo
-    * greaterThan
-    * greaterThanOrEqualTo
-    * isNull
-    * between
-    * like
-    * And
-    * Bbox
-    * Comparison
-    * ComparisonBinary
-    * EqualTo
-    * Filter
-    * GreaterThan
-    * GreaterThanOrEqualTo
-    * Intersects
-    * IsBetween
-    * IsLike
-    * IsNull
-    * LessThan
-    * LessThanOrEqualTo
-    * Not
-    * NotEqualTo
-    * Or
-    * Spatial
-    * Within
- */
-define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_9) {
+define("ol3-search/providers/mapquest", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, $, ol, ol3_fun_9) {
     "use strict";
-    var WfsGeocode = (function () {
-        function WfsGeocode(options) {
-            this.options = ol3_fun_9.defaults(options || {}, WfsGeocode.DEFAULT_OPTIONS);
+    var SampleResponse = [{
+            "place_id": "96646138",
+            "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http:\/\/www.openstreetmap.org\/copyright",
+            "osm_type": "way",
+            "osm_id": "131190417",
+            "boundingbox": ["33.9311771", "33.9530757", "-118.4387216", "-118.3701912"],
+            "lat": "33.94203285",
+            "lon": "-118.410103847565",
+            "display_name": "Los Angeles International Airport, Service road S, Westchester, Playa del Rey, Los Angeles, Los Angeles County, California, 90245, United States of America",
+            "class": "aeroway",
+            "type": "aerodrome",
+            "importance": 0.50388163735627,
+            "icon": "http:\/\/ip-10-98-174-147.mq-us-east-1.ec2.aolcloud.net:8000\/nominatim\/v1\/images\/mapicons\/transport_airport2.p.20.png",
+            "address": {
+                "aerodrome": "Los Angeles International Airport",
+                "road": "Service road S",
+                "neighbourhood": "Westchester",
+                "suburb": "Playa del Rey",
+                "city": "Los Angeles",
+                "county": "Los Angeles County",
+                "state": "California",
+                "postcode": "90245",
+                "country": "United States of America",
+                "country_code": "us"
+            }
+        }];
+    var MapQuestGeocode = (function () {
+        function MapQuestGeocode(options) {
+            this.options = ol3_fun_9.defaults(options || {}, MapQuestGeocode.DEFAULT_OPTIONS);
         }
-        Object.defineProperty(WfsGeocode.prototype, "fields", {
+        Object.defineProperty(MapQuestGeocode.prototype, "fields", {
             get: function () {
-                return [];
+                return [{
+                        name: "q",
+                        alias: "Location",
+                        length: 50
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        default: true
+                    }
+                ];
             },
             enumerable: true,
             configurable: true
         });
-        WfsGeocode.prototype.getParameters = function (options, map) {
+        MapQuestGeocode.prototype.execute = function (params) {
+            var _this = this;
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
+        MapQuestGeocode.prototype.getParameters = function (options, map) {
             ol3_fun_9.defaults(options.params, this.options.params);
             ol3_fun_9.defaults(options, this.options);
-            var format = new ol.format.WFS();
-            var searchText = options.query.replace(/ /g, "*");
-            var filters = options.params.searchNames.map(function (searchName) { return ol.format.filter.like(searchName, "*" + searchText + "*"); });
-            var filter = (filters.length > 1) ? ol.format.filter.or.apply(ol.format.filter.or, filters) : filter[0];
-            if (map && options.bounded && !options.extent) {
+            if (map && options.bounded && !options.params.viewbox) {
                 var extent = map.getView().calculateExtent(map.getSize());
                 var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
-                options.extent = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent();
+                {
+                    var b = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent().map(function (v) { return v.toFixed(6); });
+                    options.params.viewbox = b[0] + "," + b[3] + "," + b[2] + "," + b[1];
+                    options.params.bounded = 0; // viewbox is just a suggestion
+                }
             }
-            var getFeatureRequest = format.writeGetFeature({
-                featureNS: options.params.featureNS,
-                featurePrefix: options.params.featurePrefix,
-                featureTypes: options.params.featureTypes,
-                srsName: "EPSG:4326",
-                outputFormat: '',
-                maxFeatures: options.count,
-                geometryName: 'geom',
-                propertyNames: options.params.propertyNames,
-                bbox: options.extent,
-                filter: filter
-            });
-            options.params = getFeatureRequest.outerHTML;
             return options;
         };
-        WfsGeocode.prototype.handleResponse = function (response) {
-            var _this = this;
-            var format = new ol.format.WFS();
-            var result = format.readFeatures(response);
+        MapQuestGeocode.prototype.handleResponse = function (response) {
             var asExtent = function (r) {
-                var _a = r.getGeometry().getExtent(), lon1 = _a[0], lat1 = _a[1], lon2 = _a[2], lat2 = _a[3];
-                return new ol.geom.Polygon([[
-                        [lat1, lon1],
-                        [lat1, lon2],
-                        [lat2, lon2],
-                        [lat2, lon1],
-                        [lat1, lon1]
-                    ]]);
+                var _a = r.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
+                return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
             };
-            return result.map(function (f) {
-                var _a = ol.extent.getCenter(f.getGeometry().getExtent()), lat = _a[0], lon = _a[1];
-                return {
-                    title: f.get(_this.options.params.propertyNames[0]),
-                    lat: lat,
-                    lon: lon,
-                    extent: asExtent(f),
-                    address: _this.options.params.propertyNames.map(function (n) { return f.get(n); }),
-                    original: f
-                };
-            });
+            return response.map(function (result) { return ({
+                title: result.display_name,
+                extent: asExtent(result),
+                lon: parseFloat(result.lon),
+                lat: parseFloat(result.lat),
+                address: {
+                    name: result.address.neighbourhood || '',
+                    road: result.address.road || '',
+                    postcode: result.address.postcode,
+                    city: result.address.city || result.address.town,
+                    state: result.address.state,
+                    country: result.address.country
+                },
+                original: result
+            }); });
         };
-        return WfsGeocode;
+        return MapQuestGeocode;
     }());
-    WfsGeocode.DEFAULT_OPTIONS = {
-        url: 'http://localhost:8080/geoserver/cite/wfs',
-        dataType: 'xml',
-        contentType: 'application/xml',
-        method: 'POST',
+    MapQuestGeocode.DEFAULT_OPTIONS = {
+        url: '//open.mapquestapi.com/nominatim/v1/search.php',
         params: {
-            featureNS: "http://www.opengeospatial.net/cite",
-            featurePrefix: "cite",
-            count: 1,
-            featureTypes: ["addresses"],
-            searchNames: ["comment", "strname"],
-            propertyNames: ["comment", "strname", "geom"]
+            q: '',
+            key: 'X2CL1j8ekBW6g0U80tP0OogXILAQWkG4',
+            format: 'json',
+            addressdetails: 1,
+            limit: 1,
+            countrycodes: 'US',
+            'accept-language': 'en-US'
         }
     };
-    exports.WfsGeocode = WfsGeocode;
+    exports.MapQuestGeocode = MapQuestGeocode;
 });
-define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/wfs", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_3, ol3_symbolizer_4, ol3_search_4, wfs_1, ol3_fun_10, ags_source_3) {
+define("ol3-search/examples/mapquest-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/mapquest", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_3, ol3_symbolizer_4, ol3_search_4, mapquest_1, ol3_fun_10, ags_source_3) {
     "use strict";
     function run() {
         ol3_fun_10.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
-        var searchProvider = new wfs_1.WfsGeocode();
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -2933,320 +2893,51 @@ define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "j
         }).then(function () {
             map.addLayer(vector);
         });
-        var searchFields = searchProvider.fields.concat([
-            {
-                name: "query",
-                alias: "Search For",
-                default: "",
-                length: 50
-            },
-            {
-                name: "bounded",
-                alias: "Current Extent?",
-                default: true
-            }
-        ]);
-        searchFields[0].default = "LAX";
+        var searchProvider = new mapquest_1.MapQuestGeocode({
+            map: map,
+            count: 1,
+        });
         var form = ol3_search_4.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
             expanded: true,
-            title: "WFS Search",
+            title: "MapQuest Search",
             showLabels: false,
             autoClear: true,
             autoCollapse: true,
             canCollapse: true,
-            fields: searchFields
+            fields: searchProvider.fields
         });
-        var search = function (value, bounded) {
-            var searchArgs = searchProvider.getParameters({
-                query: value.query,
-                bounded: bounded,
-                count: 1,
-                params: value
-            }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json',
-                contentType: searchArgs.contentType || 'application/xml',
-                jsonp: searchArgs.callbackName
-            }).then(function (json) {
-                if (!process(json)) {
-                    // try again without extent limitation
-                    bounded && search(value, false);
-                }
-            }).fail(function () {
-                console.error("geocoder failed");
-            });
-        };
-        var process = function (json) {
-            var results = searchProvider.handleResponse(json);
-            return results.some(function (r) {
-                console.log(r);
-                if (r.address) {
-                    var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
-                    var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                    feature.set("text", r.title);
-                    source.addFeature(feature);
-                }
-                if (r.extent) {
-                    var feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
-                    ol3_fun_10.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
-                }
-                return true;
-            });
-        };
         form.on("change", function (args) {
             if (!args.value)
                 return;
             console.log("search", args.value);
-            search(args.value, args.value.bounded);
-        });
-        map.addControl(form);
-    }
-    exports.run = run;
-});
-define("ol3-search/providers/osm", ["require", "exports", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, ol, common_3) {
-    "use strict";
-    var OpenStreetGeocode = (function () {
-        function OpenStreetGeocode(options) {
-            this.options = common_3.defaults(options || {}, OpenStreetGeocode.DEFAULT_OPTIONS);
-        }
-        Object.defineProperty(OpenStreetGeocode.prototype, "fields", {
-            get: function () {
-                return [{
-                        name: "q",
-                        alias: "*"
-                    },
-                    {
-                        name: "postalcode",
-                        alias: "Postal Code"
-                    },
-                    {
-                        name: "housenumber",
-                        alias: "House Number",
-                        length: 10,
-                        type: "integer"
-                    },
-                    {
-                        name: "streetname",
-                        alias: "Street Name"
-                    },
-                    {
-                        name: "city",
-                        alias: "City"
-                    },
-                    {
-                        name: "county",
-                        alias: "County"
-                    },
-                    {
-                        name: "country",
-                        alias: "Country",
-                        domain: {
-                            type: "",
-                            name: "",
-                            codedValues: [
-                                {
-                                    name: "us", code: "us"
-                                }
-                            ]
-                        }
-                    },
-                ];
-            },
-            enumerable: true,
-            configurable: true
-        });
-        OpenStreetGeocode.prototype.getParameters = function (options, map) {
-            common_3.defaults(options.params, this.options.params);
-            common_3.defaults(options, this.options);
-            if (!options.params.viewbox && map) {
-                var extent = map.getView().calculateExtent(map.getSize());
-                var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
-                var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
-                var inSrs = map.getView().getProjection();
-                _c = ol.proj.transform([left, top_1], inSrs, "EPSG:4326"), left = _c[0], top_1 = _c[1];
-                _d = ol.proj.transform([right, bottom], inSrs, "EPSG:4326"), right = _d[0], bottom = _d[1];
-                options.params.viewbox = {
-                    bottom: bottom,
-                    top: top_1,
-                    left: left,
-                    right: right
-                };
-            }
-            if (options.params.countrycodes) {
-                options.params.countrycodes = options.params.countrycodes.join(",");
-            }
-            if (options.params.viewbox) {
-                var x = options.params.viewbox;
-                options.params.viewbox = [x.left, x.top, x.right, x.bottom].map(function (v) { return v.toFixed(5); }).join(",");
-            }
-            Object.keys(options.params).filter(function (k) { return typeof options.params[k] === "boolean"; }).forEach(function (k) {
-                options.params[k] = options.params[k] ? "1" : "0";
-            });
-            return options;
-            var _c, _d;
-        };
-        OpenStreetGeocode.prototype.handleResponse = function (response) {
-            var asExtent = function (r) {
-                var _a = r.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
-                var extent = [lon1, lat1, lon2, lat2];
-                return new ol.geom.Polygon([[
-                        ol.extent.getBottomLeft(extent),
-                        ol.extent.getTopLeft(extent),
-                        ol.extent.getTopRight(extent),
-                        ol.extent.getBottomRight(extent),
-                        ol.extent.getBottomLeft(extent)
-                    ]]);
-            };
-            return response.sort(function (v) { return v.importance || 1; }).map(function (result) { return ({
-                title: result.display_name,
-                lon: parseFloat(result.lon),
-                lat: parseFloat(result.lat),
-                extent: asExtent(result),
-                address: {
-                    name: result.address.neighbourhood || '',
-                    road: result.address.road || '',
-                    postcode: result.address.postcode,
-                    city: result.address.city || result.address.town,
-                    state: result.address.state,
-                    country: result.address.country
-                },
-                original: result
-            }); });
-        };
-        return OpenStreetGeocode;
-    }());
-    OpenStreetGeocode.DEFAULT_OPTIONS = {
-        url: '//nominatim.openstreetmap.org/search/',
-        dataType: 'json',
-        method: 'GET',
-        params: {
-            q: '',
-            format: 'json',
-            addressdetails: true,
-            limit: 10,
-            countrycodes: ['US'],
-            'accept-language': 'en-US'
-        }
-    };
-    exports.OpenStreetGeocode = OpenStreetGeocode;
-});
-define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, $, ol3_symbolizer_5, ol3_search_5, osm_1, ol3_fun_11) {
-    "use strict";
-    function run() {
-        ol3_fun_11.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
-        var searchProvider = new osm_1.OpenStreetGeocode();
-        var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
-        var mapContainer = document.getElementsByClassName("map")[0];
-        var map = new ol.Map({
-            loadTilesWhileAnimating: true,
-            target: mapContainer,
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
-                })
-            ],
-            view: new ol.View({
-                center: center,
-                projection: 'EPSG:3857',
-                zoom: 6
-            })
-        });
-        var source = new ol.source.Vector();
-        var symbolizer = new ol3_symbolizer_5.StyleConverter();
-        var vector = new ol.layer.Vector({
-            source: source,
-            style: function (feature, resolution) {
-                var style = feature.getStyle();
-                if (!style) {
-                    style = symbolizer.fromJson({
-                        circle: {
-                            radius: 4,
-                            fill: {
-                                color: "rgba(33, 33, 33, 0.2)"
-                            },
-                            stroke: {
-                                color: "#F00"
-                            }
-                        },
-                        text: {
-                            text: feature.get("text")
-                        }
-                    });
-                    feature.setStyle(style);
-                }
-                return style;
-            }
-        });
-        map.addLayer(vector);
-        var form = ol3_search_5.SearchForm.create({
-            className: 'ol-search',
-            position: 'top right',
-            expanded: true,
-            title: "OSM Search",
-            fields: [
-                {
-                    name: "q",
-                    alias: "*",
-                    default: "LAX",
-                    length: 50
-                },
-                {
-                    name: "bounded",
-                    alias: "Current Extent?",
-                    type: "boolean",
-                    default: true
-                }
-            ]
-        });
-        form.on("change", function (args) {
-            if (!args.value)
-                return;
-            var v = args.value;
-            var searchArgs = searchProvider.getParameters({
-                bounded: v.bounded,
-                params: {
-                    q: v.q
-                }
-            }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json'
-            }).then(function (json) {
-                var results = searchProvider.handleResponse(json);
+            searchProvider.execute(args.value).then(function (results) {
+                var toSrs = map.getView().getProjection();
                 results.some(function (r) {
+                    console.log(r);
                     if (r.address) {
-                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs), lon = _a[0], lat = _a[1];
                         var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                        feature.set("text", r.original.display_name);
+                        feature.set("text", r.title);
                         source.addFeature(feature);
                     }
                     if (r.extent) {
-                        r.extent.transform("EPSG:4326", map.getView().getProjection());
-                        var feature = new ol.Feature(r.extent);
-                        ol3_fun_11.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
+                        ol3_fun_10.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
                 });
-            }).fail(function () {
-                console.error("geocoder failed");
             });
         });
         map.addControl(form);
     }
     exports.run = run;
 });
-define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "jquery", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/wfs", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, $, ol3_grid_4, ol3_symbolizer_6, ol3_search_6, wfs_2, ol3_fun_12, ags_source_4) {
+define("ol3-search/examples/ol3-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/layer", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_4, ol3_symbolizer_5, ol3_search_5, layer_2, ol3_fun_11, ags_source_4) {
     "use strict";
     function run() {
-        ol3_fun_12.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
-        var searchProvider = new wfs_2.WfsGeocode();
+        ol3_fun_11.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
         var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
         var mapContainer = document.getElementsByClassName("map")[0];
         var map = new ol.Map({
@@ -3265,7 +2956,7 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "j
             })
         });
         var source = new ol.source.Vector();
-        var symbolizer = new ol3_symbolizer_6.StyleConverter();
+        var symbolizer = new ol3_symbolizer_5.StyleConverter();
         var vector = new ol.layer.Vector({
             source: source,
             style: function (feature, resolution) {
@@ -3330,14 +3021,21 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "j
                     layers: [layer]
                 });
                 grid.on("feature-click", function (args) {
-                    ol3_fun_12.navigation.zoomToFeature(map, args.feature);
+                    ol3_fun_11.navigation.zoomToFeature(map, args.feature);
                 });
                 grid.on("feature-hover", function (args) {
                     // TODO: highlight args.feature
                 });
             });
-        }).then(function () {
-            map.addLayer(vector);
+            searchProvider.options.params.layers = layers;
+        }).then(function () { return map.addLayer(vector); });
+        var searchProvider = new layer_2.LayerGeocode({
+            params: {
+                map: map,
+                layers: [],
+                searchNames: ["STATE_ABBR", "STATE_NAME", "SUB_REGION"],
+                propertyNames: ["STATE_NAME", "STATE_ABBR", "SUB_REGION"]
+            }
         });
         var searchFields = searchProvider.fields.concat([
             {
@@ -3353,7 +3051,7 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "j
             }
         ]);
         searchFields[0].default = "LAX";
-        var form = ol3_search_6.SearchForm.create({
+        var form = ol3_search_5.SearchForm.create({
             className: 'ol-search',
             position: 'top right',
             expanded: true,
@@ -3371,21 +3069,7 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "j
                 count: 1,
                 params: value
             }, map);
-            $.ajax({
-                url: searchArgs.url,
-                method: searchArgs.method || 'GET',
-                data: searchArgs.params,
-                dataType: searchArgs.dataType || 'json',
-                contentType: searchArgs.contentType || 'application/xml',
-                jsonp: searchArgs.callbackName
-            }).then(function (json) {
-                if (!process(json)) {
-                    // try again without extent limitation
-                    bounded && search(value, false);
-                }
-            }).fail(function () {
-                console.error("geocoder failed");
-            });
+            process(searchProvider.execute(searchArgs));
         };
         var process = function (json) {
             var results = searchProvider.handleResponse(json);
@@ -3399,9 +3083,515 @@ define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "j
                 }
                 if (r.extent) {
                     var feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
-                    ol3_fun_12.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                    ol3_fun_11.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
+            });
+        };
+        form.on("change", function (args) {
+            if (!args.value)
+                return;
+            console.log("search", args.value);
+            search(args.value, args.value.bounded);
+        });
+        map.addControl(form);
+    }
+    exports.run = run;
+});
+define("ol3-search/providers/osm", ["require", "exports", "jquery", "openlayers", "bower_components/ol3-fun/ol3-fun/common"], function (require, exports, $, ol, common_3) {
+    "use strict";
+    var OpenStreetGeocode = (function () {
+        function OpenStreetGeocode(options) {
+            this.options = common_3.defaults(options || {}, OpenStreetGeocode.DEFAULT_OPTIONS);
+        }
+        Object.defineProperty(OpenStreetGeocode.prototype, "fields", {
+            get: function () {
+                return [
+                    {
+                        name: "q",
+                        alias: "*",
+                        default: "LAX",
+                        length: 50
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        type: "boolean",
+                        default: true
+                    }
+                ];
+            },
+            enumerable: true,
+            configurable: true
+        });
+        OpenStreetGeocode.prototype.execute = function (params) {
+            var _this = this;
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
+        OpenStreetGeocode.prototype.getParameters = function (options, map) {
+            common_3.defaults(options.params, this.options.params);
+            common_3.defaults(options, this.options);
+            if (!options.params.viewbox && map) {
+                var extent = map.getView().calculateExtent(map.getSize());
+                var _a = ol.extent.getBottomLeft(extent), left = _a[0], bottom = _a[1];
+                var _b = ol.extent.getTopRight(extent), right = _b[0], top_1 = _b[1];
+                var inSrs = map.getView().getProjection();
+                _c = ol.proj.transform([left, top_1], inSrs, "EPSG:4326"), left = _c[0], top_1 = _c[1];
+                _d = ol.proj.transform([right, bottom], inSrs, "EPSG:4326"), right = _d[0], bottom = _d[1];
+                options.params.viewbox = {
+                    bottom: bottom,
+                    top: top_1,
+                    left: left,
+                    right: right
+                };
+            }
+            if (options.params.countrycodes) {
+                options.params.countrycodes = options.params.countrycodes.join(",");
+            }
+            if (options.params.viewbox) {
+                var x = options.params.viewbox;
+                options.params.viewbox = [x.left, x.top, x.right, x.bottom].map(function (v) { return v.toFixed(5); }).join(",");
+            }
+            Object.keys(options.params).filter(function (k) { return typeof options.params[k] === "boolean"; }).forEach(function (k) {
+                options.params[k] = options.params[k] ? "1" : "0";
+            });
+            return options;
+            var _c, _d;
+        };
+        OpenStreetGeocode.prototype.handleResponse = function (response) {
+            var asExtent = function (r) {
+                var _a = r.boundingbox.map(function (v) { return parseFloat(v); }), lat1 = _a[0], lat2 = _a[1], lon1 = _a[2], lon2 = _a[3];
+                return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
+            };
+            return response.sort(function (v) { return v.importance || 1; }).map(function (result) { return ({
+                title: result.display_name,
+                lon: parseFloat(result.lon),
+                lat: parseFloat(result.lat),
+                extent: asExtent(result),
+                address: {
+                    name: result.address.neighbourhood || '',
+                    road: result.address.road || '',
+                    postcode: result.address.postcode,
+                    city: result.address.city || result.address.town,
+                    state: result.address.state,
+                    country: result.address.country
+                },
+                original: result
+            }); });
+        };
+        return OpenStreetGeocode;
+    }());
+    OpenStreetGeocode.DEFAULT_OPTIONS = {
+        url: '//nominatim.openstreetmap.org/search/',
+        dataType: 'json',
+        method: 'GET',
+        params: {
+            q: '',
+            format: 'json',
+            addressdetails: true,
+            limit: 10,
+            countrycodes: ['US'],
+            'accept-language': 'en-US'
+        }
+    };
+    exports.OpenStreetGeocode = OpenStreetGeocode;
+});
+define("ol3-search/examples/osm-search", ["require", "exports", "openlayers", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/osm", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_symbolizer_6, ol3_search_6, osm_1, ol3_fun_12) {
+    "use strict";
+    function run() {
+        ol3_fun_12.cssin("examples/osm-search", "\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n.ol-search form {\n    max-width: 12em;\n}\n    ");
+        var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
+        var mapContainer = document.getElementsByClassName("map")[0];
+        var map = new ol.Map({
+            loadTilesWhileAnimating: true,
+            target: mapContainer,
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: center,
+                projection: 'EPSG:3857',
+                zoom: 6
+            })
+        });
+        var source = new ol.source.Vector();
+        var symbolizer = new ol3_symbolizer_6.StyleConverter();
+        var vector = new ol.layer.Vector({
+            source: source,
+            style: function (feature, resolution) {
+                var style = feature.getStyle();
+                if (!style) {
+                    style = symbolizer.fromJson({
+                        circle: {
+                            radius: 4,
+                            fill: {
+                                color: "rgba(33, 33, 33, 0.2)"
+                            },
+                            stroke: {
+                                color: "#F00"
+                            }
+                        },
+                        text: {
+                            text: feature.get("text")
+                        }
+                    });
+                    feature.setStyle(style);
+                }
+                return style;
+            }
+        });
+        map.addLayer(vector);
+        var searchProvider = new osm_1.OpenStreetGeocode({
+            count: 1,
+            map: map
+        });
+        var form = ol3_search_6.SearchForm.create({
+            className: 'ol-search',
+            position: 'top right',
+            expanded: true,
+            title: "OSM Search",
+            fields: searchProvider.fields
+        });
+        form.on("change", function (args) {
+            if (!args.value)
+                return;
+            searchProvider.execute(args.value).then(function (results) {
+                results.some(function (r) {
+                    if (r.address) {
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857"), lon = _a[0], lat = _a[1];
+                        var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                        feature.set("text", r.original.display_name);
+                        source.addFeature(feature);
+                    }
+                    if (r.extent) {
+                        r.extent.transform("EPSG:4326", map.getView().getProjection());
+                        var feature = new ol.Feature(r.extent);
+                        ol3_fun_12.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                    }
+                    return true;
+                });
+            });
+        });
+        map.addControl(form);
+    }
+    exports.run = run;
+});
+/**
+ * Searches a WFS service
+ * The current architecture assumes the response works nicely with $.ajax
+ * In this case the ol WFS request builder will produce XML so we'll need
+ * to extend that logic to work with XML.
+ * This would be a good time to wrap $.ajax in a module.
+ *
+ * Framework todos...
+ * Eliminate custom query params from other providers and rely on options.query
+ * Replace option.bounded with option.extent
+ * Add options.count
+ *
+ * wfs filter options:
+    * and
+    * or
+    * not
+    * bbox
+    * intersects
+    * within
+    * equalTo
+    * notEqualTo
+    * lessThan
+    * lessThanOrEqualTo
+    * greaterThan
+    * greaterThanOrEqualTo
+    * isNull
+    * between
+    * like
+    * And
+    * Bbox
+    * Comparison
+    * ComparisonBinary
+    * EqualTo
+    * Filter
+    * GreaterThan
+    * GreaterThanOrEqualTo
+    * Intersects
+    * IsBetween
+    * IsLike
+    * IsNull
+    * LessThan
+    * LessThanOrEqualTo
+    * Not
+    * NotEqualTo
+    * Or
+    * Spatial
+    * Within
+ */
+define("ol3-search/providers/wfs", ["require", "exports", "openlayers", "bower_components/ol3-fun/index"], function (require, exports, ol, ol3_fun_13) {
+    "use strict";
+    var olFormatFilter = ol.format["filter"];
+    var WfsGeocode = (function () {
+        function WfsGeocode(options) {
+            this.options = ol3_fun_13.defaults(options || {}, WfsGeocode.DEFAULT_OPTIONS);
+        }
+        Object.defineProperty(WfsGeocode.prototype, "fields", {
+            get: function () {
+                return [
+                    {
+                        name: "query",
+                        alias: "Search For",
+                        default: "",
+                        length: 50
+                    },
+                    {
+                        name: "bounded",
+                        alias: "Current Extent?",
+                        default: true
+                    }
+                ];
+            },
+            enumerable: true,
+            configurable: true
+        });
+        WfsGeocode.prototype.execute = function (params) {
+            var _this = this;
+            var options = this.getParameters({ params: params }, this.options.map);
+            var d = $.Deferred();
+            $.ajax({
+                url: options.url,
+                method: options.method || 'GET',
+                contentType: options.contentType || 'application/xml',
+                data: options.params,
+                dataType: options.dataType || 'json',
+                jsonp: options.callbackName
+            })
+                .then(function (json) { return d.resolve(_this.handleResponse(json)); })
+                .fail(function () { return d.reject("geocoder failed"); });
+            return d;
+        };
+        WfsGeocode.prototype.getParameters = function (options, map) {
+            ol3_fun_13.defaults(options.params, this.options.params);
+            ol3_fun_13.defaults(options, this.options);
+            var format = new ol.format.WFS();
+            var searchText = options.params.query.replace(/ /g, "*");
+            var filters = options.params.searchNames.map(function (searchName) { return olFormatFilter.like(searchName, "*" + searchText + "*"); });
+            var filter = (filters.length > 1) ? olFormatFilter.or.apply(olFormatFilter.or, filters) : filters[0];
+            if (map && options.bounded && !options.extent) {
+                var extent = map.getView().calculateExtent(map.getSize());
+                var p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
+                options.extent = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent();
+            }
+            var getFeatureRequest = format.writeGetFeature({
+                featureNS: options.params.featureNS,
+                featurePrefix: options.params.featurePrefix,
+                featureTypes: options.params.featureTypes,
+                srsName: "EPSG:4326",
+                outputFormat: '',
+                maxFeatures: options.count,
+                geometryName: 'geom',
+                propertyNames: options.params.propertyNames,
+                bbox: options.extent,
+                filter: filter
+            });
+            // TODO: introduce execute(), why should that be abstracted?
+            options.params = getFeatureRequest.outerHTML;
+            return options;
+        };
+        WfsGeocode.prototype.handleResponse = function (response) {
+            var _this = this;
+            var format = new ol.format.WFS();
+            var result = format.readFeatures(response);
+            var asExtent = function (r) {
+                var extent = r.getGeometry().getExtent();
+                // results have xy reversed, not sure how to configure against it
+                extent = [extent[1], extent[0], extent[3], extent[2]];
+                return ol.geom.Polygon.fromExtent(extent);
+            };
+            return result.map(function (f) {
+                var extent = asExtent(f);
+                var _a = extent.getInteriorPoint().getCoordinates(), lon = _a[0], lat = _a[1];
+                return {
+                    title: f.get(_this.options.params.propertyNames[0]),
+                    lat: lat,
+                    lon: lon,
+                    extent: extent,
+                    address: _this.options.params.propertyNames.map(function (n) { return f.get(n); }),
+                    original: f
+                };
+            });
+        };
+        return WfsGeocode;
+    }());
+    WfsGeocode.DEFAULT_OPTIONS = {
+        url: 'http://localhost:8080/geoserver/cite/wfs',
+        dataType: 'xml',
+        contentType: 'application/xml',
+        method: 'POST',
+        params: {
+            query: '',
+            featureNS: "http://www.opengeospatial.net/cite",
+            featurePrefix: "cite",
+            count: 1,
+            featureTypes: ["addresses"],
+            searchNames: ["comment", "strname"],
+            propertyNames: ["comment", "strname", "geom"]
+        }
+    };
+    exports.WfsGeocode = WfsGeocode;
+});
+define("ol3-search/examples/wfs-search", ["require", "exports", "openlayers", "bower_components/ol3-grid/index", "bower_components/ol3-symbolizer/index", "ol3-search/ol3-search", "ol3-search/providers/wfs", "bower_components/ol3-fun/index", "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source"], function (require, exports, ol, ol3_grid_5, ol3_symbolizer_7, ol3_search_7, wfs_1, ol3_fun_14, ags_source_5) {
+    "use strict";
+    function run() {
+        ol3_fun_14.cssin("examples/ol3-search", "\n\n.ol-grid.statecode .ol-grid-container {\n    background-color: white;\n    width: 10em;\n}\n\n.ol-grid .ol-grid-container.ol-hidden {\n}\n\n.ol-grid .ol-grid-container {\n    width: 15em;\n}\n\n.ol-grid-table {\n    width: 100%;\n}\n\ntable.ol-grid-table {\n    border-collapse: collapse;\n    width: 100%;\n}\n\ntable.ol-grid-table > td {\n    padding: 8px;\n    text-align: left;\n    border-bottom: 1px solid #ddd;\n}\n\n.ol-search tr.focus {\n    background: white;\n}\n\n.ol-search:hover {\n    background: white;\n}\n\n.ol-search label.ol-search-label {\n    white-space: nowrap;\n}\n\n    ");
+        var center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
+        var mapContainer = document.getElementsByClassName("map")[0];
+        var map = new ol.Map({
+            loadTilesWhileAnimating: true,
+            target: mapContainer,
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM(),
+                    opacity: 0.8
+                })
+            ],
+            view: new ol.View({
+                center: center,
+                projection: 'EPSG:3857',
+                zoom: 6
+            })
+        });
+        var source = new ol.source.Vector();
+        var symbolizer = new ol3_symbolizer_7.StyleConverter();
+        var vector = new ol.layer.Vector({
+            source: source,
+            style: function (feature, resolution) {
+                var style = feature.getStyle();
+                if (!style) {
+                    style = symbolizer.fromJson({
+                        circle: {
+                            radius: 4,
+                            fill: {
+                                color: "rgba(33, 33, 33, 0.2)"
+                            },
+                            stroke: {
+                                color: "#F00"
+                            }
+                        },
+                        text: {
+                            text: feature.get("text")
+                        }
+                    });
+                    feature.setStyle(style);
+                }
+                return style;
+            }
+        });
+        ags_source_5.ArcGisVectorSourceFactory.create({
+            map: map,
+            services: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services',
+            serviceName: 'USA_States_Generalized',
+            layers: [0]
+        }).then(function (layers) {
+            layers.forEach(function (layer) {
+                layer.setStyle(function (feature, resolution) {
+                    var style = feature.getStyle();
+                    if (!style) {
+                        style = symbolizer.fromJson({
+                            fill: {
+                                color: "rgba(200,200,200,0.5)"
+                            },
+                            stroke: {
+                                color: "rgba(33,33,33,0.8)",
+                                width: 3
+                            },
+                            text: {
+                                text: feature.get("STATE_ABBR")
+                            }
+                        });
+                        feature.setStyle(style);
+                    }
+                    return style;
+                });
+                map.getLayers().insertAt(0, layer);
+                var grid = ol3_grid_5.Grid.create({
+                    map: map,
+                    className: "ol-grid",
+                    position: "statecode top left-2",
+                    expanded: true,
+                    currentExtent: true,
+                    autoCollapse: true,
+                    // we do it ourselves
+                    autoPan: false,
+                    showIcon: true,
+                    layers: [layer]
+                });
+                grid.on("feature-click", function (args) {
+                    ol3_fun_14.navigation.zoomToFeature(map, args.feature);
+                });
+                grid.on("feature-hover", function (args) {
+                    // TODO: highlight args.feature
+                });
+            });
+        }).then(function () {
+            map.addLayer(vector);
+        });
+        var searchProvider = new wfs_1.WfsGeocode({
+            url: 'http://localhost:8080/geoserver/ips/wfs',
+            count: 1,
+            map: map,
+            params: {
+                featureNS: 'http://inforpublicsector.com/geoserver',
+                featurePrefix: 'ips',
+                featureTypes: ['ADDRESS'],
+                searchNames: 'CITY,STNAME,STATE'.split(','),
+                propertyNames: ['STNAME', 'GEOM']
+            }
+        });
+        var form = ol3_search_7.SearchForm.create({
+            className: 'ol-search',
+            position: 'top right',
+            expanded: true,
+            title: "IPS Address Search",
+            showLabels: false,
+            autoClear: true,
+            autoCollapse: true,
+            canCollapse: true,
+            fields: searchProvider.fields
+        });
+        var search = function (value, bounded) {
+            var toSrs = map.getView().getProjection();
+            searchProvider.execute(value)
+                .then(function (results) {
+                if (!results.length) {
+                    // try again without extent limitation
+                    bounded && search(value, false);
+                }
+                results.some(function (r) {
+                    console.log(r);
+                    if (r.address) {
+                        var _a = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs), lon = _a[0], lat = _a[1];
+                        var feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                        feature.set("text", r.title);
+                        source.addFeature(feature);
+                    }
+                    if (r.extent) {
+                        var feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
+                        ol3_fun_14.navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
+                    }
+                    return true;
+                });
+            }).fail(function () {
+                console.error("geocoder failed");
             });
         };
         form.on("change", function (args) {

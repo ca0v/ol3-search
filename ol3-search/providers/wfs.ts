@@ -109,6 +109,23 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         return [];
     }
 
+    execute(options: Request<WfsGeocode.WfsRequest>) {
+        let d = $.Deferred<Result<WfsGeocode.WfsResult>[]>();
+        $.ajax({
+            url: options.url,
+            method: options.method || 'GET',
+            contentType: options.contentType || 'application/xml',
+            data: options.params,
+            dataType: options.dataType || 'json',
+            jsonp: options.callbackName
+        })
+            .then(json => d.resolve(this.handleResponse(json)))
+            .fail(() => {
+                console.error("geocoder failed");
+            });
+        return d;
+    }
+
     getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);

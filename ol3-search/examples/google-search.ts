@@ -1,10 +1,9 @@
 import ol = require("openlayers");
-import $ = require("jquery");
 
 import { Grid } from "ol3-grid";
 import { StyleConverter, Format } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { GoogleGeocode } from "../providers/google";
+import { GoogleGeocode as Geocoder } from "../providers/google";
 import { cssin, navigation, mixin } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 
@@ -37,7 +36,7 @@ export function run() {
 }
     `);
 
-    let searchProvider = new GoogleGeocode();
+    let searchProvider = new Geocoder();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 
@@ -142,7 +141,7 @@ export function run() {
     });
 
     form.on("change", (args: {
-        value: GoogleGeocode.Request & {
+        value: Geocoder.Request & {
             bounded: boolean
         }
     }) => {
@@ -153,30 +152,25 @@ export function run() {
             params: args.value
         }, map);
 
-        $.ajax({
-            url: searchArgs.url,
-            method: searchArgs.method || 'GET',
-            data: searchArgs.params,
-            dataType: searchArgs.dataType || 'json'
-        }).then(json => {
-            let results = searchProvider.handleResponse(json);
+        searchProvider.execute(searchArgs).then(results => {
+
+            let toSrs = map.getView().getProjection();
+
             results.some(r => {
+                console.log(r);
                 if (r.address) {
-                    let geom = new ol.geom.Point([r.lon, r.lat]).transform("EPSG:4326", map.getView().getProjection());
-                    let feature = new ol.Feature(geom);
-                    feature.set("text", r.original.formatted_address);
-                    r.original.types.forEach(t => feature.set(t, true));
+                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs);
+                    let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
+                    feature.set("text", r.title);
                     source.addFeature(feature);
                 }
                 if (r.extent) {
-                    r.extent.transform("EPSG:4326", map.getView().getProjection());
-                    let feature = new ol.Feature(r.extent);
+                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
                     navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
             });
-        }).fail(() => {
-            console.error("geocoder failed");
+
         });
 
     });

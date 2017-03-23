@@ -1,6 +1,6 @@
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
-import { Request, Result, SearchField } from "./index";
+import { Geocoder, Request, Result, SearchField } from "./index";
 
 const SampleResponse = [{
     "place_id": "96646138",
@@ -76,7 +76,7 @@ export interface MapQuestGeocodeOptions extends Request<MapQuestGeocode.Request>
 }
 
 
-export class MapQuestGeocode {
+export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQuestGeocode.Resource> {
 
     private options: MapQuestGeocodeOptions;
 
@@ -103,6 +103,22 @@ export class MapQuestGeocode {
             alias: "Location",
             length: 50
         }]
+    }
+
+    execute(options: Request<MapQuestGeocode.Request>) {
+        let d = $.Deferred<Result<MapQuestGeocode.Resource>[]>();
+        $.ajax({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.params,
+            dataType: options.dataType || 'json',
+            jsonp: options.callbackName
+        })
+            .then(json => d.resolve(this.handleResponse(json)))
+            .fail(() => {
+                console.error("geocoder failed");
+            });
+        return d;
     }
 
     getParameters(options: Request<MapQuestGeocode.Request>, map?: ol.Map) {

@@ -4,7 +4,7 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
-import { OpenStreetGeocode } from "../providers/osm";
+import { OpenStreetGeocode as Geocoder } from "../providers/osm";
 import { cssin, mixin, navigation } from "ol3-fun";
 
 export function run() {
@@ -18,7 +18,7 @@ export function run() {
 }
     `);
 
-    let searchProvider = new OpenStreetGeocode();
+    let searchProvider = new Geocoder();
 
     let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
 

@@ -1,7 +1,7 @@
 // https://github.com/jonataswalker/ol3-geocoder/blob/master/src/js/providers/osm.js
 import ol = require("openlayers");
 import { defaults } from "ol3-fun/ol3-fun/common";
-import { Request, Result, SearchField } from "./index";
+import { Geocoder, Request, Result, SearchField } from "./index";
 
 export module OpenStreetGeocode {
 
@@ -76,7 +76,7 @@ export module OpenStreetGeocode {
 export interface OpenStreetGeocodeOptions extends Request<OpenStreetGeocode.Request> {
 }
 
-export class OpenStreetGeocode {
+export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, OpenStreetGeocode.ResponseItem> {
 
     static DEFAULT_OPTIONS = <OpenStreetGeocodeOptions>{
         url: '//nominatim.openstreetmap.org/search/',
@@ -139,6 +139,22 @@ export class OpenStreetGeocode {
             }
         },
         ]
+    }
+
+    execute(options: Request<OpenStreetGeocode.Request>) {
+        let d = $.Deferred<Result<OpenStreetGeocode.ResponseItem>[]>();
+        $.ajax({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.params,
+            dataType: options.dataType || 'json',
+            jsonp: options.callbackName
+        })
+            .then(json => d.resolve(this.handleResponse(json)))
+            .fail(() => {
+                console.error("geocoder failed");
+            });
+        return d;
     }
 
     getParameters(options: Request<OpenStreetGeocode.Request>, map?: ol.Map) {

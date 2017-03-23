@@ -1,6 +1,7 @@
+import $ = require("jquery");
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
-import { Request, Result, SearchField } from "./index";
+import { Geocoder, Request, Result, SearchField } from "./index";
 
 export module GoogleGeocode {
 
@@ -80,7 +81,7 @@ const GoogleMappingTable = {
 
 const GoogleMappingKeys = <Array<keyof typeof GoogleMappingTable>>Object.keys(GoogleMappingTable);
 
-export class GoogleGeocode {
+export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeocode.ResponseItem> {
 
     static DEFAULT_OPTIONS = <GoogleGeocodeOptions>{
         url: '//maps.googleapis.com/maps/api/geocode/json',
@@ -106,6 +107,22 @@ export class GoogleGeocode {
 
     constructor(options?: GoogleGeocodeOptions) {
         this.options = defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
+    }
+
+    execute(options: Request<GoogleGeocode.Request>) {
+        let d = $.Deferred<Result<GoogleGeocode.ResponseItem>[]>();
+        $.ajax({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.params,
+            dataType: options.dataType || 'json',
+            jsonp: options.callbackName
+        })
+            .then(json => d.resolve(this.handleResponse(json)))
+            .fail(() => {
+                console.error("geocoder failed");
+            });
+        return d;
     }
 
     public getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map) {

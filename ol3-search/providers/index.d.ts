@@ -50,8 +50,9 @@ export interface SearchField {
     length?: number;
 }
 
-export interface Geocoder<TRequest,  TResult> {
+export interface Geocoder<TRequest, TResult> {
     fields: SearchField[];
     getParameters(options: Request<TRequest>, map?: ol.Map): Request<TRequest>;
     handleResponse(response: any): Result<TResult>[];
+    execute(options: Request<TRequest>): JQueryPromise<Result<TResult>[]>;
 }

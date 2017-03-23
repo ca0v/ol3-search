@@ -1,5 +1,4 @@
 import ol = require("openlayers");
-import $ = require("jquery");
 
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
@@ -190,6 +189,7 @@ table.ol-grid-table > td {
             bounded: boolean
         }
     }) => {
+
         if (!args.value) return;
         console.log("search", args.value);
 
@@ -198,30 +198,25 @@ table.ol-grid-table > td {
             params: args.value
         }, map);
 
-        $.ajax({
-            url: searchArgs.url,
-            method: searchArgs.method || 'GET',
-            data: searchArgs.params,
-            dataType: searchArgs.dataType || 'json',
-            jsonp: searchArgs.callbackName
-        }).then(json => {
-            let results = searchProvider.handleResponse(json);
+        searchProvider.execute(searchArgs).then(results => {
+
+            let toSrs = map.getView().getProjection();
+
             results.some(r => {
                 console.log(r);
                 if (r.address) {
-                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", "EPSG:3857");
+                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs);
                     let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                     feature.set("text", r.title);
                     source.addFeature(feature);
                 }
                 if (r.extent) {
-                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", "EPSG:3857"));
+                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
                     navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                 }
                 return true;
             });
-        }).fail(() => {
-            console.error("geocoder failed");
+
         });
 
     });

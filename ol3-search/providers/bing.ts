@@ -1,3 +1,4 @@
+import $ = require("jquery");
 import ol = require("openlayers");
 import { defaults } from "ol3-fun";
 import { Request, Result, SearchField, Geocoder } from "./index";
@@ -55,7 +56,7 @@ export module BingGeocode {
     export interface Request {
         query?: string;
         key?: string;
-        includeNeighborhood?: 0|1;
+        includeNeighborhood?: 0 | 1;
         maxResults?: number; // 1..20
         umv?: string; // userMapView (lat,lon,lat,lon)
         ul?: string; // user location (lat,lon)
@@ -148,6 +149,22 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         }]
     }
 
+    execute(options: Request<BingGeocode.Request>) {
+        let d = $.Deferred<Result<BingGeocode.Resource>[]>();
+        $.ajax({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.params,
+            dataType: options.dataType || 'json',
+            jsonp: options.callbackName
+        })
+            .then(json => d.resolve(this.handleResponse(json)))
+            .fail(() => {
+                console.error("geocoder failed");
+            });
+        return d;
+    }
+
     getParameters(options: Request<BingGeocode.Request>, map?: ol.Map) {
         defaults(options.params, this.options.params);
         defaults(options, this.options);
@@ -189,4 +206,5 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
             }));
         })[0];
     }
+
 }

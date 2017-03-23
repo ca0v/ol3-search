@@ -115,223 +115,6 @@ declare module "index" {
     import Input = require("ol3-search/ol3-search");
     export = Input;
 }
-declare module "bower_components/ol3-fun/ol3-fun/snapshot" {
-    import ol = require("openlayers");
-    class Snapshot {
-        static render(canvas: HTMLCanvasElement, feature: ol.Feature): void;
-        /**
-         * convert features into data:image/png;base64;
-         */
-        static snapshot(feature: ol.Feature): string;
-    }
-    export = Snapshot;
-}
-declare module "bower_components/ol3-grid/ol3-grid/ol3-grid" {
-    import ol = require("openlayers");
-    export interface GridOptions {
-        map?: ol.Map;
-        className?: string;
-        position?: string;
-        expanded?: boolean;
-        hideButton?: boolean;
-        autoCollapse?: boolean;
-        autoPan?: boolean;
-        canCollapse?: boolean;
-        currentExtent?: boolean;
-        showIcon?: boolean;
-        labelAttributeName?: string;
-        closedText?: string;
-        openedText?: string;
-        element?: HTMLElement;
-        target?: HTMLElement;
-        layers?: ol.layer.Vector[];
-        placeholderText?: string;
-        zoomDuration?: number;
-        zoomPadding?: number;
-        zoomMinResolution?: number;
-    }
-    export class Grid extends ol.control.Control {
-        static DEFAULT_OPTIONS: GridOptions;
-        static create(options: GridOptions): Grid;
-        private features;
-        private button;
-        private grid;
-        private options;
-        handlers: Array<() => void>;
-        private constructor(options);
-        destroy(): void;
-        setPosition(position: string): void;
-        cssin(): void;
-        redraw(): void;
-        private featureMap;
-        add(feature: ol.Feature, layer?: ol.layer.Vector): void;
-        remove(feature: ol.Feature, layer: ol.layer.Vector): void;
-        clear(): void;
-        collapse(): void;
-        expand(): void;
-        on(type: string, cb: Function): ol.Object | ol.Object[];
-        on(type: "feature-click", cb: (args: {
-            type: "feature-click";
-            feature: ol.Feature;
-            row: HTMLTableRowElement;
-        }) => void): void;
-    }
-}
-declare module "bower_components/ol3-grid/index" {
-    import Grid = require("bower_components/ol3-grid/ol3-grid/ol3-grid");
-    export = Grid;
-}
-declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/base" {
-    /**
-     * implemented by all style serializers
-     */
-    export interface IConverter<T> {
-        fromJson: (json: T) => ol.style.Style;
-        toJson(style: ol.style.Style): T;
-    }
-}
-declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer" {
-    import ol = require("openlayers");
-    import Serializer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/base");
-    export namespace Format {
-        type Color = number[] | string;
-        type Size = number[];
-        type Offset = number[];
-        type LineDash = number[];
-        interface Fill {
-            color?: string;
-            gradient?: {
-                type?: string;
-                stops?: string;
-            };
-        }
-        interface Stroke {
-            color?: string;
-            width?: number;
-            lineCap?: string;
-            lineJoin?: string;
-            lineDash?: LineDash;
-            miterLimit?: number;
-        }
-        interface Style {
-            fill?: Fill;
-            image?: Image;
-            stroke?: Stroke;
-            text?: Text;
-            zIndex?: number;
-        }
-        interface Image {
-            opacity?: number;
-            rotateWithView?: boolean;
-            rotation?: number;
-            scale?: number;
-            snapToPixel?: boolean;
-        }
-        interface Circle {
-            radius: number;
-            stroke?: Stroke;
-            fill?: Fill;
-            snapToPixel?: boolean;
-        }
-        interface Star extends Image {
-            angle?: number;
-            fill?: Fill;
-            points?: number;
-            stroke?: Stroke;
-            radius?: number;
-            radius2?: number;
-        }
-        interface Icon extends Image {
-            anchor?: Offset;
-            anchorOrigin?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
-            anchorXUnits?: "fraction" | "pixels";
-            anchorYUnits?: "fraction" | "pixels";
-            color?: Color;
-            crossOrigin?: string;
-            src?: string;
-            offset?: Offset;
-            offsetOrigin?: 'top_left' | 'top_right' | 'bottom-left' | 'bottom-right';
-            size?: Size;
-        }
-        interface Text {
-            fill?: Fill;
-            font?: string;
-            offsetX?: number;
-            offsetY?: number;
-            rotation?: number;
-            scale?: number;
-            stroke?: Stroke;
-            text?: string;
-            textAlign?: string;
-            textBaseline?: string;
-        }
-    }
-    export namespace Format {
-        interface Style {
-            image?: Icon & Svg;
-            icon?: Icon;
-            svg?: Svg;
-            star?: Star;
-            circle?: Circle;
-            text?: Text;
-            fill?: Fill;
-            stroke?: Stroke;
-        }
-        interface Icon {
-            "anchor-x"?: number;
-            "anchor-y"?: number;
-        }
-        interface Text {
-            "offset-x"?: number;
-            "offset-y"?: number;
-        }
-        interface Circle {
-            opacity?: number;
-        }
-        interface Svg {
-            anchor?: Offset;
-            anchorOrigin?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
-            anchorXUnits?: string;
-            anchorYUnits?: string;
-            color?: Color;
-            crossOrigin?: string;
-            img?: string;
-            imgSize?: Size;
-            offset?: Offset;
-            offsetOrigin?: 'top_left' | 'top_right' | 'bottom-left' | 'bottom-right';
-            path?: string;
-            stroke?: Stroke;
-            fill?: Fill;
-        }
-    }
-    export class StyleConverter implements Serializer.IConverter<Format.Style> {
-        fromJson(json: Format.Style): ol.style.Style;
-        toJson(style: ol.style.Style): Format.Style;
-        /**
-         * uses the interior point of a polygon when rendering a 'point' style
-         */
-        setGeometry(feature: ol.Feature): ol.geom.Geometry;
-        private assign(obj, prop, value);
-        private serializeStyle(style);
-        private serializeColor(color);
-        private serializeFill(fill);
-        private deserializeStyle(json);
-        private deserializeText(json);
-        private deserializeCircle(json);
-        private deserializeStar(json);
-        private deserializeIcon(json);
-        private deserializeSvg(json);
-        private deserializeFill(json);
-        private deserializeStroke(json);
-        private deserializeColor(fill);
-        private deserializeLinearGradient(json);
-        private deserializeRadialGradient(json);
-    }
-}
-declare module "bower_components/ol3-symbolizer/index" {
-    import Symbolizer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer");
-    export = Symbolizer;
-}
 declare module "ol3-search/providers/bing" {
     import { Request, Result, SearchField, Geocoder } from "./index";
     export module BingGeocode {
@@ -401,6 +184,72 @@ declare module "ol3-search/providers/bing" {
         private getParameters(options, map?);
         private handleResponse(response);
     }
+}
+declare module "bower_components/ol3-fun/ol3-fun/snapshot" {
+    import ol = require("openlayers");
+    class Snapshot {
+        static render(canvas: HTMLCanvasElement, feature: ol.Feature): void;
+        /**
+         * convert features into data:image/png;base64;
+         */
+        static snapshot(feature: ol.Feature): string;
+    }
+    export = Snapshot;
+}
+declare module "bower_components/ol3-grid/ol3-grid/ol3-grid" {
+    import ol = require("openlayers");
+    export interface GridOptions {
+        map?: ol.Map;
+        className?: string;
+        position?: string;
+        expanded?: boolean;
+        hideButton?: boolean;
+        autoCollapse?: boolean;
+        autoPan?: boolean;
+        canCollapse?: boolean;
+        currentExtent?: boolean;
+        showIcon?: boolean;
+        labelAttributeName?: string;
+        closedText?: string;
+        openedText?: string;
+        element?: HTMLElement;
+        target?: HTMLElement;
+        layers?: ol.layer.Vector[];
+        placeholderText?: string;
+        zoomDuration?: number;
+        zoomPadding?: number;
+        zoomMinResolution?: number;
+    }
+    export class Grid extends ol.control.Control {
+        static DEFAULT_OPTIONS: GridOptions;
+        static create(options: GridOptions): Grid;
+        private features;
+        private button;
+        private grid;
+        private options;
+        handlers: Array<() => void>;
+        private constructor(options);
+        destroy(): void;
+        setPosition(position: string): void;
+        cssin(): void;
+        redraw(): void;
+        private featureMap;
+        add(feature: ol.Feature, layer?: ol.layer.Vector): void;
+        remove(feature: ol.Feature, layer: ol.layer.Vector): void;
+        clear(): void;
+        collapse(): void;
+        expand(): void;
+        on(type: string, cb: Function): ol.Object | ol.Object[];
+        on(type: "feature-click", cb: (args: {
+            type: "feature-click";
+            feature: ol.Feature;
+            row: HTMLTableRowElement;
+        }) => void): void;
+    }
+}
+declare module "bower_components/ol3-grid/index" {
+    import Grid = require("bower_components/ol3-grid/ol3-grid/ol3-grid");
+    export = Grid;
 }
 declare module "bower_components/ol3-symbolizer/ol3-symbolizer/common/ajax" {
     class Ajax {
@@ -710,6 +559,153 @@ declare module "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-catalog" 
         aboutLayer(layer: number): JQueryDeferred<FeatureLayerInfo>;
     }
 }
+declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/base" {
+    /**
+     * implemented by all style serializers
+     */
+    export interface IConverter<T> {
+        fromJson: (json: T) => ol.style.Style;
+        toJson(style: ol.style.Style): T;
+    }
+}
+declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer" {
+    import ol = require("openlayers");
+    import Serializer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/base");
+    export namespace Format {
+        type Color = number[] | string;
+        type Size = number[];
+        type Offset = number[];
+        type LineDash = number[];
+        interface Fill {
+            color?: string;
+            gradient?: {
+                type?: string;
+                stops?: string;
+            };
+        }
+        interface Stroke {
+            color?: string;
+            width?: number;
+            lineCap?: string;
+            lineJoin?: string;
+            lineDash?: LineDash;
+            miterLimit?: number;
+        }
+        interface Style {
+            fill?: Fill;
+            image?: Image;
+            stroke?: Stroke;
+            text?: Text;
+            zIndex?: number;
+        }
+        interface Image {
+            opacity?: number;
+            rotateWithView?: boolean;
+            rotation?: number;
+            scale?: number;
+            snapToPixel?: boolean;
+        }
+        interface Circle {
+            radius: number;
+            stroke?: Stroke;
+            fill?: Fill;
+            snapToPixel?: boolean;
+        }
+        interface Star extends Image {
+            angle?: number;
+            fill?: Fill;
+            points?: number;
+            stroke?: Stroke;
+            radius?: number;
+            radius2?: number;
+        }
+        interface Icon extends Image {
+            anchor?: Offset;
+            anchorOrigin?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
+            anchorXUnits?: "fraction" | "pixels";
+            anchorYUnits?: "fraction" | "pixels";
+            color?: Color;
+            crossOrigin?: string;
+            src?: string;
+            offset?: Offset;
+            offsetOrigin?: 'top_left' | 'top_right' | 'bottom-left' | 'bottom-right';
+            size?: Size;
+        }
+        interface Text {
+            fill?: Fill;
+            font?: string;
+            offsetX?: number;
+            offsetY?: number;
+            rotation?: number;
+            scale?: number;
+            stroke?: Stroke;
+            text?: string;
+            textAlign?: string;
+            textBaseline?: string;
+        }
+    }
+    export namespace Format {
+        interface Style {
+            image?: Icon & Svg;
+            icon?: Icon;
+            svg?: Svg;
+            star?: Star;
+            circle?: Circle;
+            text?: Text;
+            fill?: Fill;
+            stroke?: Stroke;
+        }
+        interface Icon {
+            "anchor-x"?: number;
+            "anchor-y"?: number;
+        }
+        interface Text {
+            "offset-x"?: number;
+            "offset-y"?: number;
+        }
+        interface Circle {
+            opacity?: number;
+        }
+        interface Svg {
+            anchor?: Offset;
+            anchorOrigin?: "bottom-left" | "bottom-right" | "top-left" | "top-right";
+            anchorXUnits?: string;
+            anchorYUnits?: string;
+            color?: Color;
+            crossOrigin?: string;
+            img?: string;
+            imgSize?: Size;
+            offset?: Offset;
+            offsetOrigin?: 'top_left' | 'top_right' | 'bottom-left' | 'bottom-right';
+            path?: string;
+            stroke?: Stroke;
+            fill?: Fill;
+        }
+    }
+    export class StyleConverter implements Serializer.IConverter<Format.Style> {
+        fromJson(json: Format.Style): ol.style.Style;
+        toJson(style: ol.style.Style): Format.Style;
+        /**
+         * uses the interior point of a polygon when rendering a 'point' style
+         */
+        setGeometry(feature: ol.Feature): ol.geom.Geometry;
+        private assign(obj, prop, value);
+        private serializeStyle(style);
+        private serializeColor(color);
+        private serializeFill(fill);
+        private deserializeStyle(json);
+        private deserializeText(json);
+        private deserializeCircle(json);
+        private deserializeStar(json);
+        private deserializeIcon(json);
+        private deserializeSvg(json);
+        private deserializeFill(json);
+        private deserializeStroke(json);
+        private deserializeColor(fill);
+        private deserializeLinearGradient(json);
+        private deserializeRadialGradient(json);
+    }
+}
 declare module "bower_components/ol3-symbolizer/ol3-symbolizer/format/ags-symbolizer" {
     export namespace ArcGisFeatureServerLayer {
         type SpatialReference = {
@@ -931,6 +927,17 @@ declare module "bower_components/ol3-symbolizer/ol3-symbolizer/ags/ags-source" {
     export class ArcGisVectorSourceFactory {
         static create(options: IOptions): JQueryDeferred<ol.layer.Vector[]>;
     }
+}
+declare module "bower_components/ol3-symbolizer/index" {
+    import Symbolizer = require("bower_components/ol3-symbolizer/ol3-symbolizer/format/ol3-symbolizer");
+    export = Symbolizer;
+}
+declare module "ol3-search/examples/mapmaker" {
+    import ol = require("openlayers");
+    export function create(): {
+        map: ol.Map;
+        source: ol.source.Vector;
+    };
 }
 declare module "ol3-search/examples/bing-search" {
     export function run(): void;
@@ -1175,12 +1182,6 @@ declare module "ol3-search/providers/osm" {
         private handleResponse(response);
     }
 }
-declare module "ol3-search/examples/ol3-search" {
-    export function run(): void;
-}
-declare module "ol3-search/examples/osm-search" {
-    export function run(): void;
-}
 declare module "ol3-search/providers/wfs" {
     import { Request, Result, SearchField, Geocoder } from "./index";
     export module WfsGeocode {
@@ -1208,6 +1209,12 @@ declare module "ol3-search/providers/wfs" {
         private getParameters(options, map?);
         private handleResponse(response);
     }
+}
+declare module "ol3-search/examples/ol3-search" {
+    export function run(): void;
+}
+declare module "ol3-search/examples/osm-search" {
+    export function run(): void;
 }
 declare module "ol3-search/examples/wfs-search" {
     export function run(): void;

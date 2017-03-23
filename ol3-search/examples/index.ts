@@ -5,6 +5,7 @@ export function run() {
     index
     bing-search
     google-search
+    layer-search
     mapquest-search
     osm-search
     wfs-search

@@ -88,6 +88,7 @@ export module BingGeocode {
     }
 
     export interface Resource {
+        // lat, lat, lon, lon
         bbox: number[];
         name: string;
         point: Point;
@@ -166,7 +167,7 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
 
         let asExtent = (r: BingGeocode.Resource) => {
             let v = r.bbox;
-            return new ol.geom.Polygon([[[v[1], v[0]], [v[3], v[2]]]]);
+            return ol.geom.Polygon.fromExtent([v[1], v[0], v[3], v[2]]);
         };
 
         return response.resourceSets.map(resourceSet => {

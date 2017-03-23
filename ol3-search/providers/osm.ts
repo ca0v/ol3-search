@@ -182,15 +182,7 @@ export class OpenStreetGeocode {
 
         let asExtent = (r: OpenStreetGeocode.ResponseItem) => {
             let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));
-            let extent = <ol.Extent>[lon1, lat1, lon2, lat2];
-
-            return new ol.geom.Polygon([[
-                ol.extent.getBottomLeft(extent),
-                ol.extent.getTopLeft(extent),
-                ol.extent.getTopRight(extent),
-                ol.extent.getBottomRight(extent),
-                ol.extent.getBottomLeft(extent)
-            ]]);
+            return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
         };
 
         return response.sort(v => v.importance || 1).map(result => (<Result<typeof result>>{

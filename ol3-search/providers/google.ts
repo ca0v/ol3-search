@@ -132,10 +132,7 @@ export class GoogleGeocode {
 
         let asExtent = (r: GoogleGeocode.ResponseItem) => {
             let v = r.geometry.viewport;
-            return new ol.geom.Polygon([[
-                [v.southwest.lng, v.southwest.lat],
-                [v.northeast.lng, v.northeast.lat]
-            ]]);
+            return ol.geom.Polygon.fromExtent([v.southwest.lng, v.southwest.lat, v.northeast.lng, v.northeast.lat]);
         };
 
         let result = response.results.map(result => {

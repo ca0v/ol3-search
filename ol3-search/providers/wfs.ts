@@ -51,6 +51,11 @@ import ol = require("openlayers");
 import { defaults } from "ol3-fun";
 import { Request, Result, SearchField, Geocoder } from "./index";
 
+const olFormatFilter = <{
+    like: any;
+    or: any;
+}><any>ol.format.filter;
+
 export module WfsGeocode {
 
     export interface WfsRequest {
@@ -111,8 +116,8 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         let format = new ol.format.WFS();
 
         let searchText = options.query.replace(/ /g, "*");
-        let filters = options.params.searchNames.map(searchName => ol.format.filter.like(searchName, `*${searchText}*`));
-        let filter = (filters.length > 1) ? ol.format.filter.or.apply(ol.format.filter.or, filters) : filters[0];
+        let filters = options.params.searchNames.map(searchName => olFormatFilter.like(searchName, `*${searchText}*`));
+        let filter = (filters.length > 1) ? olFormatFilter.or.apply(olFormatFilter.or, filters) : filters[0];
 
         if (map && options.bounded && !options.extent) {
             let extent = map.getView().calculateExtent(map.getSize());
@@ -120,7 +125,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             options.extent = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent();
         }
 
-        let getFeatureRequest = format.writeGetFeature({
+        let getFeatureRequest = <HTMLElement>format.writeGetFeature({
             featureNS: options.params.featureNS,
             featurePrefix: options.params.featurePrefix,
             featureTypes: options.params.featureTypes,
@@ -133,7 +138,8 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             filter: filter
         });
 
-        options.params = getFeatureRequest.outerHTML;
+        // TODO: introduce execute(), why should that be abstracted?
+        options.params = <any>getFeatureRequest.outerHTML;
 
         return options;
     }
@@ -143,25 +149,21 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         let result = format.readFeatures(response);
 
         let asExtent = (r: ol.Feature) => {
-            let [lon1, lat1, lon2, lat2] = r.getGeometry().getExtent();
-
-            return new ol.geom.Polygon([[
-                [lat1, lon1],
-                [lat1, lon2],
-                [lat2, lon2],
-                [lat2, lon1],
-                [lat1, lon1]
-            ]]);
+            let extent = r.getGeometry().getExtent();
+            // results have xy reversed, not sure how to configure against it
+            extent = [extent[1], extent[0], extent[3], extent[2]];
+            return ol.geom.Polygon.fromExtent(extent);
         };
 
         return result.map(f => {
-            let [lat, lon] = ol.extent.getCenter(f.getGeometry().getExtent());
+            let extent = asExtent(f);
+            let [lon, lat] = extent.getInteriorPoint().getCoordinates();
 
             return {
                 title: f.get(this.options.params.propertyNames[0]),
                 lat: lat,
                 lon: lon,
-                extent: asExtent(f),
+                extent: extent,
                 address: <any>this.options.params.propertyNames.map(n => f.get(n)),
                 original: f
             }

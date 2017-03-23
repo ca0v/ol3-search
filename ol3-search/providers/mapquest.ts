@@ -48,6 +48,7 @@ export module MapQuestGeocode {
         license: string;
         osm_type: string;
         osm_id: string;
+        // lat, lat, lon, lon
         boundingbox: string[];
         lat: string;
         lon: string;
@@ -123,8 +124,8 @@ export class MapQuestGeocode {
     handleResponse(response: MapQuestGeocode.Response): Result<MapQuestGeocode.Resource>[] {
 
         let asExtent = (r: MapQuestGeocode.Resource) => {
-            let v = r.boundingbox.map(v => parseFloat(v));
-            return new ol.geom.Polygon([[[v[2], v[0]], [v[3], v[1]]]]);
+            let [lat1, lat2, lon1, lon2] = r.boundingbox.map(v => parseFloat(v));
+            return ol.geom.Polygon.fromExtent([lon1, lat1, lon2, lat2]);
         };
 
         return response.map(result => ({

@@ -112,7 +112,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
 
         let searchText = options.query.replace(/ /g, "*");
         let filters = options.params.searchNames.map(searchName => ol.format.filter.like(searchName, `*${searchText}*`));
-        let filter = (filters.length > 1) ? ol.format.filter.or.apply(ol.format.filter.or, filters) : filter[0];
+        let filter = (filters.length > 1) ? ol.format.filter.or.apply(ol.format.filter.or, filters) : filters[0];
 
         if (map && options.bounded && !options.extent) {
             let extent = map.getView().calculateExtent(map.getSize());

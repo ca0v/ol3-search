@@ -128,10 +128,10 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         let d = $.Deferred<Result<WfsGeocode.WfsResult>[]>();
         $.ajax({
             url: options.url,
-            method: options.method || 'GET',
-            contentType: options.contentType || 'application/xml',
+            method: options.method,
+            contentType: options.contentType,
             data: options.params,
-            dataType: options.dataType || 'json',
+            dataType: options.dataType,
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))
@@ -168,7 +168,6 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             filter: filter
         });
 
-        // TODO: introduce execute(), why should that be abstracted?
         options.params = <any>getFeatureRequest.outerHTML;
 
         return options;

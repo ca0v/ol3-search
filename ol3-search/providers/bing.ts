@@ -159,10 +159,10 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         let d = $.Deferred<Result<BingGeocode.Resource>[]>();
         $.ajax({
             url: options.url,
-            method: options.method || 'GET',
+            method: options.method,
             data: options.params,
-            dataType: options.dataType || 'json',
-            jsonp: options.callbackName
+            dataType: options.dataType,
+            jsonp: options.callbackName,
         })
             .then(json => d.resolve(this.handleResponse(json)))
             .fail(() => d.reject("geocoder failed"));

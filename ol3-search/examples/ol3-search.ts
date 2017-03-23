@@ -4,12 +4,20 @@ import $ = require("jquery");
 import { Grid } from "ol3-grid";
 import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
+
 import { BingGeocode } from "../providers/bing";
 import { GoogleGeocode } from "../providers/google";
+import { MapQuestGeocode } from "../providers/mapquest";
 import { OpenStreetGeocode } from "../providers/osm";
+import { WfsGeocode } from "../providers/wfs";
+
 import { cssin, mixin, navigation } from "ol3-fun";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 import { Geocoder, Request, Result, SearchField } from "../providers/index";
+
+function clone(value: Object) {
+    return JSON.parse(JSON.stringify(value));
+}
 
 export function run() {
 
@@ -169,10 +177,27 @@ table.ol-grid-table > td {
             count: 1,
             map: map
         }),
+        new MapQuestGeocode({
+            count: 1,
+            map: map
+        }),
         new OpenStreetGeocode({
             count: 1,
             map: map
-        })];
+        }),
+        new WfsGeocode({
+            count: 1,
+            map: map,
+            url: 'http://localhost:8080/geoserver/ips/wfs',
+            params: {
+                featureNS: 'http://inforpublicsector.com/geoserver',
+                featurePrefix: 'ips',
+                featureTypes: ['ADDRESS'],
+                searchNames: 'CITY,STNAME,STATE'.split(','),
+                propertyNames: ['STNAME', 'GEOM']
+            }
+        }),
+    ];
 
     let form = SearchForm.create({
         className: 'ol-search',
@@ -191,9 +216,9 @@ table.ol-grid-table > td {
         }]
     });
 
-
     let search = (value: { query: string }, bounded: boolean) => {
-        providers[0].execute(value).then(results => {
+        // clone value before passing to provider so each gets pristine arguments
+        providers[0].execute(clone(value)).then(results => {
             if (results.length) {
                 process(results);
                 // switch primary provider
@@ -201,7 +226,7 @@ table.ol-grid-table > td {
             } else {
                 // run all the remaining providers at once
                 providers.filter((v, i) => i > 0).forEach(provider => {
-                    provider.execute(value).then(results => {
+                    provider.execute(clone(value)).then(results => {
                         process(results);
                     });
                 })
@@ -209,7 +234,7 @@ table.ol-grid-table > td {
         }).fail(() => {
             // switch primary provider
             providers.push(providers.shift());
-            search(value, bounded);
+            search(clone(value), bounded);
         });
     }
 

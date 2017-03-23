@@ -116,13 +116,14 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
 
     execute(params: OpenStreetGeocode.Request) {
         params.q = params.q || params["query"];
+        delete params["query"];
         let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<OpenStreetGeocode.ResponseItem>[]>();
         $.ajax({
             url: options.url,
-            method: options.method || 'GET',
+            method: options.method ,
             data: options.params,
-            dataType: options.dataType || 'json',
+            dataType: options.dataType,
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))

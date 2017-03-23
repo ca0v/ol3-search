@@ -102,7 +102,6 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
             {
                 name: "address",
                 alias: "Location",
-                default: "LAX",
                 length: 50
             },
             {
@@ -119,14 +118,16 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
 
     execute(params: GoogleGeocode.Request) {
         params.address = params.address || params["query"];
+        delete params["query"];
+        
         let options = this.getParameters({ params: params }, this.options.map);
 
         let d = $.Deferred<Result<GoogleGeocode.ResponseItem>[]>();
         $.ajax({
             url: options.url,
-            method: options.method || 'GET',
+            method: options.method,
             data: options.params,
-            dataType: options.dataType || 'json',
+            dataType: options.dataType,
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))

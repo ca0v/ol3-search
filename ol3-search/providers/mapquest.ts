@@ -100,7 +100,7 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
 
     get fields() {
         return <Array<SearchField>>[{
-            name: "q",
+            name: "query",
             alias: "Location",
             length: 50
         },
@@ -113,13 +113,15 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
     }
 
     execute(params: MapQuestGeocode.Request) {
+        params.q = params.q || params["query"];
+        delete params["query"];
         let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<MapQuestGeocode.Resource>[]>();
         $.ajax({
             url: options.url,
-            method: options.method || 'GET',
+            method: options.method,
             data: options.params,
-            dataType: options.dataType || 'json',
+            dataType: options.dataType,
             jsonp: options.callbackName
         })
             .then(json => d.resolve(this.handleResponse(json)))

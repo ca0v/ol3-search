@@ -1,11 +1,10 @@
 import ol = require("openlayers");
 import $ = require("jquery");
 
-import { Grid } from "ol3-grid";
-import { StyleConverter } from "ol3-symbolizer";
 import { SearchForm } from "../ol3-search";
 import { OpenStreetGeocode as Geocoder } from "../providers/osm";
 import { cssin, mixin, navigation } from "ol3-fun";
+import { create as makeMap } from "./mapmaker";
 
 export function run() {
 
@@ -18,54 +17,7 @@ export function run() {
 }
     `);
 
-    let center = ol.proj.transform([-120, 35], 'EPSG:4326', 'EPSG:3857');
-
-    let mapContainer = document.getElementsByClassName("map")[0];
-
-    let map = new ol.Map({
-        loadTilesWhileAnimating: true,
-        target: mapContainer,
-        layers: [
-            new ol.layer.Tile({
-                source: new ol.source.OSM()
-            })
-        ],
-        view: new ol.View({
-            center: center,
-            projection: 'EPSG:3857',
-            zoom: 6
-        })
-    });
-
-    let source = new ol.source.Vector();
-
-    let symbolizer = new StyleConverter();
-
-    let vector = new ol.layer.Vector({
-        source: source,
-        style: (feature: ol.Feature, resolution: number) => {
-            let style = feature.getStyle();
-            if (!style) {
-                style = symbolizer.fromJson({
-                    circle: {
-                        radius: 4,
-                        fill: {
-                            color: "rgba(33, 33, 33, 0.2)"
-                        },
-                        stroke: {
-                            color: "#F00"
-                        }
-                    },
-                    text: {
-                        text: feature.get("text")
-                    }
-                });
-                feature.setStyle(style);
-            }
-            return <ol.style.Style>style;
-        }
-    });
-    map.addLayer(vector);
+    let { map, source } = makeMap();
 
     let searchProvider = new Geocoder({
         count: 1,

@@ -24,6 +24,7 @@ export interface IOptions extends olx.control.ControlOptions {
     openedText?: string;
     source?: HTMLElement;
     target?: HTMLElement;
+    searchButton?: HTMLInputElement;
     // what to show on the tooltip
     title?: string;
     fields?: SearchField[];
@@ -79,7 +80,7 @@ export class SearchForm extends ol.control.Control {
     options: IOptions;
     public handlers: Array<() => void>;
 
-    constructor(options: IOptions & {
+    private constructor(options: IOptions & {
         element: HTMLElement;
         target: HTMLElement;
     }) {
@@ -146,21 +147,36 @@ export class SearchForm extends ol.control.Control {
                 tr.appendChild(value);
 
                 let input: HTMLInputElement;
-                switch (field.type) {
-                    case "boolean":
-                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="checkbox" ${field.default ? "checked" : ""} />`);
-                        break;
-                    case "integer":
-                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" step="1" ${field.default ? `value="${field.default}"` : ""} />`);
-                        break;
-                    case "number":
-                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" max="${Array(field.length || 3).join("9")}" />`);
-                        break;
-                    case "string":
-                    default:
-                        input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="text" ${field.default ? `value="${field.default}"` : ""} />`);
-                        input.maxLength = field.length || 20;
-                        break;
+
+                if (field.domain) {
+                    let select = document.createElement("select");
+                    select.name = field.name;
+                    select.className = `input ${field.name}`;
+                    field.domain.codedValues.forEach(cv => {
+                        let option = document.createElement("option");
+                        select.appendChild(option);
+                        option.text = `${cv.name} (${cv.code})`;
+                        option.value = cv.code;
+                    });
+                    input = <any>select;
+                }
+                else {
+                    switch (field.type) {
+                        case "boolean":
+                            input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="checkbox" ${field.default ? "checked" : ""} />`);
+                            break;
+                        case "integer":
+                            input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" step="1" ${field.default ? `value="${field.default}"` : ""} />`);
+                            break;
+                        case "number":
+                            input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="number" min="0" max="${Array(field.length || 3).join("9")}" />`);
+                            break;
+                        case "string":
+                        default:
+                            input = <HTMLInputElement>html(`<input class="input ${field.name}" name="${field.name}" type="text" ${field.default ? `value="${field.default}"` : ""} />`);
+                            input.maxLength = field.length || 20;
+                            break;
+                    }
                 }
 
                 input.title = field.alias;
@@ -176,33 +192,37 @@ export class SearchForm extends ol.control.Control {
 
         {
             let footer = form.getElementsByClassName("footer")[0];
-            let searchButton = <HTMLInputElement>html(`<input type="button" class="ol-search-button" value="Search"/>`);
-            footer.appendChild(searchButton);
 
-            form.addEventListener("keydown", (args: KeyboardEvent) => {
-                if (args.key === "Enter") {
-                    if (args.srcElement !== searchButton) {
-                        searchButton.focus();
-                    } else {
-                        options.autoCollapse && button.focus();
+            if (!this.options.searchButton) {
+                let searchButton = <HTMLInputElement>html(`<input type="button" class="ol-search-button" value="Search"/>`);
+                footer.appendChild(searchButton);
+                this.options.searchButton = searchButton;
+
+                form.addEventListener("keydown", (args: KeyboardEvent) => {
+                    if (args.key === "Enter") {
+                        if (args.srcElement !== searchButton) {
+                            searchButton.focus();
+                        } else {
+                            options.autoCollapse && button.focus();
+                        }
                     }
-                }
-            });
-
-            searchButton.addEventListener("click", () => {
-                this.dispatchEvent({
-                    type: "change",
-                    value: this.value
                 });
-                if (this.options.autoCollapse && this.options.canCollapse) {
-                    this.collapse();
-                }
-                if (this.options.autoClear) {
-                    this.options.fields.forEach(f => {
-                        form[f.name].value = f.default === undefined ? "" : f.default;
+
+                searchButton.addEventListener("click", () => {
+                    this.dispatchEvent({
+                        type: "change",
+                        value: this.value
                     });
-                }
-            });
+                    if (this.options.autoCollapse && this.options.canCollapse) {
+                        this.collapse();
+                    }
+                    if (this.options.autoClear) {
+                        this.options.fields.forEach(f => {
+                            form[f.name].value = f.default === undefined ? "" : f.default;
+                        });
+                    }
+                });
+            }
 
         }
 

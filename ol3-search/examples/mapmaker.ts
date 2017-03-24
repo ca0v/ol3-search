@@ -2,7 +2,7 @@ import ol = require("openlayers");
 import { Grid } from "ol3-grid";
 import { ArcGisVectorSourceFactory } from "ol3-symbolizer/ol3-symbolizer/ags/ags-source";
 import { StyleConverter } from "ol3-symbolizer";
-import { cssin, mixin, navigation } from "ol3-fun";
+import { navigation } from "ol3-fun";
 
 export function create() {
 

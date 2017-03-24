@@ -77,6 +77,7 @@ declare module "ol3-search/ol3-search" {
         openedText?: string;
         source?: HTMLElement;
         target?: HTMLElement;
+        searchButton?: HTMLInputElement;
         title?: string;
         fields?: SearchField[];
     }
@@ -86,10 +87,7 @@ declare module "ol3-search/ol3-search" {
         form: HTMLFormElement;
         options: IOptions;
         handlers: Array<() => void>;
-        constructor(options: IOptions & {
-            element: HTMLElement;
-            target: HTMLElement;
-        });
+        private constructor(options);
         destroy(): void;
         setPosition(position: string): void;
         cssin(): void;
@@ -180,7 +178,7 @@ declare module "ol3-search/providers/bing" {
         static DEFAULT_OPTIONS: BingGeocodeOptions;
         constructor(options?: BingGeocodeOptions);
         readonly fields: SearchField[];
-        execute(params: BingGeocode.Request): JQueryDeferred<Result<BingGeocode.Resource>[]>;
+        execute(options: Request<BingGeocode.Request>): JQueryDeferred<Result<BingGeocode.Resource>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
     }
@@ -939,7 +937,19 @@ declare module "ol3-search/examples/mapmaker" {
         source: ol.source.Vector;
     };
 }
+declare module "ol3-search/examples/formmaker" {
+    import ol = require("openlayers");
+    import { Geocoder } from "../providers/index";
+    export function create(options: {
+        map: ol.Map;
+        source: ol.source.Vector;
+        searchProvider: Geocoder<any, any>;
+    }): void;
+}
 declare module "ol3-search/examples/bing-search" {
+    export function run(): void;
+}
+declare module "ol3-search/examples/form-options" {
     export function run(): void;
 }
 declare module "ol3-search/providers/google" {
@@ -998,7 +1008,7 @@ declare module "ol3-search/providers/google" {
         private options;
         readonly fields: SearchField[];
         constructor(options?: GoogleGeocodeOptions);
-        execute(params: GoogleGeocode.Request): JQueryDeferred<Result<GoogleGeocode.ResponseItem>[]>;
+        execute(options: Request<GoogleGeocode.Request>): JQueryDeferred<Result<GoogleGeocode.ResponseItem>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
         private parseComponents(address_components, result);
@@ -1039,7 +1049,7 @@ declare module "ol3-search/providers/layer" {
         /**
          * Performs the actual search
          */
-        execute(params: LayerGeocode.Request): JQueryDeferred<Result<LayerGeocode.Result>[]>;
+        execute(options: Request<LayerGeocode.Request>): JQueryDeferred<Result<LayerGeocode.Result>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
     }
@@ -1093,7 +1103,7 @@ declare module "ol3-search/providers/mapquest" {
         private static DEFAULT_OPTIONS;
         constructor(options?: typeof MapQuestGeocode.DEFAULT_OPTIONS);
         readonly fields: SearchField[];
-        execute(params: MapQuestGeocode.Request): JQueryDeferred<Result<MapQuestGeocode.Resource>[]>;
+        execute(options: Request<MapQuestGeocode.Request>): JQueryDeferred<Result<MapQuestGeocode.Resource>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
     }
@@ -1177,7 +1187,7 @@ declare module "ol3-search/providers/osm" {
         private options;
         constructor(options?: OpenStreetGeocodeOptions);
         readonly fields: SearchField[];
-        execute(params: OpenStreetGeocode.Request): JQueryDeferred<Result<OpenStreetGeocode.ResponseItem>[]>;
+        execute(options: Request<OpenStreetGeocode.Request>): JQueryDeferred<Result<OpenStreetGeocode.ResponseItem>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
     }
@@ -1205,7 +1215,7 @@ declare module "ol3-search/providers/wfs" {
         static DEFAULT_OPTIONS: WfsGeocodeOptions;
         constructor(options?: WfsGeocodeOptions);
         readonly fields: SearchField[];
-        execute(params: WfsGeocode.WfsRequest): JQueryDeferred<Result<WfsGeocode.WfsResult>[]>;
+        execute(params: Request<WfsGeocode.WfsRequest>): JQueryDeferred<Result<WfsGeocode.WfsResult>[]>;
         private getParameters(options, map?);
         private handleResponse(response);
     }

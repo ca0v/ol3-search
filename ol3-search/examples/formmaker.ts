@@ -1,5 +1,5 @@
 import ol = require("openlayers");
-import { cssin, mixin, navigation } from "ol3-fun";
+import { navigation } from "ol3-fun";
 import { SearchForm } from "../ol3-search";
 import { Geocoder } from "../providers/index";
 

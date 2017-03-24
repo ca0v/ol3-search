@@ -2,7 +2,7 @@ export function run() {
     let l = window.location;
     let path = `${l.origin}${l.pathname}?run=ol3-search/examples/`;
     let labs = `
-    index
+    form-options
     bing-search
     google-search
     layer-search
@@ -10,6 +10,7 @@ export function run() {
     osm-search
     wfs-search
     ol3-search
+    index
     `;
 
     let styles = document.createElement("style");

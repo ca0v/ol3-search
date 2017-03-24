@@ -153,8 +153,8 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         ]
     }
 
-    execute(params: BingGeocode.Request) {
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<BingGeocode.Request>) {
+        options = this.getParameters(options, this.options.map);
 
         let d = $.Deferred<Result<BingGeocode.Resource>[]>();
         $.ajax({
@@ -177,7 +177,6 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
         defaults(options.params, {
             key: options.key,
             maxResults: options.count,
-            query: options.query,
         }, this.options.params);
 
         if (map && options.bounded) {
@@ -202,10 +201,11 @@ export class BingGeocode implements Geocoder<BingGeocode.Request, BingGeocode.Re
 
         response.resourceSets.forEach(resourceSet => {
             let resultSet = resourceSet.resources.map(result => ({
-                extent: asExtent(result),
+                placeId: response.traceId,
                 title: result.name,
                 lon: result.point.coordinates[1],
                 lat: result.point.coordinates[0],
+                extent: asExtent(result),
                 address: {
                     name: result.address.formattedAddress,
                     road: result.address.addressLine,

@@ -9,7 +9,7 @@ import { create as makeMap } from "./mapmaker";
 
 export function run() {
 
-    cssin("examples/ol3-search", `
+    cssin("examples/wfs-search", `
 
 .ol-grid.statecode .ol-grid-container {
     background-color: white;

@@ -100,7 +100,7 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
 
     get fields() {
         return <Array<SearchField>>[{
-            name: "query",
+            name: "q",
             alias: "Location",
             length: 50
         },
@@ -112,11 +112,13 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
         ]
     }
 
-    execute(params: MapQuestGeocode.Request) {
-        params.q = params.q || params["query"];
-        delete params["query"];
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<MapQuestGeocode.Request>) {
+        options = this.getParameters(options, this.options.map);
         let d = $.Deferred<Result<MapQuestGeocode.Resource>[]>();
+
+        // cleanup
+        delete options.params.query;
+
         $.ajax({
             url: options.url,
             method: options.method,
@@ -126,6 +128,7 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
         })
             .then(json => d.resolve(this.handleResponse(json)))
             .fail(() => d.reject("geocoder failed"));
+            
         return d;
     }
 
@@ -133,6 +136,7 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
         defaults(options.params, this.options.params);
         defaults(options, this.options);
 
+        // compute viewbox
         if (map && options.bounded && !options.params.viewbox) {
             let extent = map.getView().calculateExtent(map.getSize());
             let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
@@ -153,10 +157,11 @@ export class MapQuestGeocode implements Geocoder<MapQuestGeocode.Request, MapQue
         };
 
         return response.map(result => ({
+            placeId: result.place_id,
             title: result.display_name,
-            extent: asExtent(result),
             lon: parseFloat(result.lon),
             lat: parseFloat(result.lat),
+            extent: asExtent(result),
             address: {
                 name: result.address.neighbourhood || '',
                 road: result.address.road || '',

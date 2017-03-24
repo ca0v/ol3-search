@@ -116,7 +116,7 @@ table.ol-grid-table > td {
 
     let search = (value: { query: string }, bounded: boolean) => {
         // clone value before passing to provider so each gets pristine arguments
-        providers[0].execute(clone(value)).then(results => {
+        providers[0].execute({ params: clone(value) }).then(results => {
             if (results.length) {
                 process(results);
                 // switch primary provider
@@ -124,7 +124,7 @@ table.ol-grid-table > td {
             } else {
                 // run all the remaining providers at once
                 providers.filter((v, i) => i > 0).forEach(provider => {
-                    provider.execute(clone(value)).then(results => {
+                    provider.execute({ params: clone(value) }).then(results => {
                         process(results);
                     });
                 })
@@ -132,7 +132,7 @@ table.ol-grid-table > td {
         }).fail(() => {
             // switch primary provider
             providers.push(providers.shift());
-            search(clone(value), bounded);
+            search(value, bounded);
         });
     }
 

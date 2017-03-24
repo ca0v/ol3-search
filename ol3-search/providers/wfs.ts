@@ -54,7 +54,7 @@ import { Request, Result, SearchField, Geocoder } from "./index";
 const olFormatFilter = <{
     like: any;
     or: any;
-}>ol.format["filter"];
+}><any>ol.format["filter"];
 
 export module WfsGeocode {
 
@@ -123,7 +123,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         ];
     }
 
-    execute(params: WfsGeocode.WfsRequest) {
+    execute(params: Request<WfsGeocode.WfsRequest>) {
         let options = this.getParameters({ params: params }, this.options.map);
         let d = $.Deferred<Result<WfsGeocode.WfsResult>[]>();
         $.ajax({
@@ -140,8 +140,8 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
     }
 
     private getParameters(options: Request<WfsGeocode.WfsRequest>, map?: ol.Map) {
-        defaults(options.params, this.options.params);
         defaults(options, this.options);
+        defaults(options.params, this.options.params);
 
         let format = new ol.format.WFS();
 
@@ -189,6 +189,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             let [lon, lat] = extent.getInteriorPoint().getCoordinates();
 
             return {
+                placeId: "" + f.getId(),
                 title: f.get(this.options.params.propertyNames[0]),
                 lat: lat,
                 lon: lon,

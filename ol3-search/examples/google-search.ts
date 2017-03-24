@@ -1,13 +1,11 @@
-import ol = require("openlayers");
-
-import { SearchForm } from "../ol3-search";
 import { GoogleGeocode as Geocoder } from "../providers/google";
-import { cssin, navigation, mixin } from "ol3-fun";
+import { cssin } from "ol3-fun";
 import { create as makeMap } from "./mapmaker";
+import { create as makeForm } from "./formmaker";
 
 export function run() {
 
-    cssin("examples/googl-search", `
+    cssin("examples/google-search", `
 
 .ol-search tr.focus {
     background: white;
@@ -41,42 +39,10 @@ export function run() {
         count: 1
     });
 
-    let form = SearchForm.create({
-        className: 'ol-search',
-        position: 'top right',
-        expanded: true,
-        title: "Google Search",
-        fields: searchProvider.fields
+    makeForm({
+        map: map,
+        searchProvider: searchProvider,
+        source: source
     });
-
-    form.on("change", (args: {
-        value: Geocoder.Request
-    }) => {
-        if (!args.value) return;
-
-        let toSrs = map.getView().getProjection();
-
-        searchProvider.execute(args.value).then(results => {
-
-            results.some(r => {
-                console.log(r);
-                if (r.address) {
-                    let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs);
-                    let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
-                    feature.set("text", r.title);
-                    source.addFeature(feature);
-                }
-                if (r.extent) {
-                    let feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
-                    navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
-                }
-                return true;
-            });
-
-        });
-
-    });
-
-    map.addControl(form);
 
 }

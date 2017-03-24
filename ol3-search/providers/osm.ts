@@ -114,14 +114,16 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
         ]
     }
 
-    execute(params: OpenStreetGeocode.Request) {
-        params.q = params.q || params["query"];
-        delete params["query"];
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<OpenStreetGeocode.Request>) {
+
+        options = this.getParameters(options, this.options.map);
+        delete options.params.query;
+
         let d = $.Deferred<Result<OpenStreetGeocode.ResponseItem>[]>();
+
         $.ajax({
             url: options.url,
-            method: options.method ,
+            method: options.method,
             data: options.params,
             dataType: options.dataType,
             jsonp: options.callbackName
@@ -136,7 +138,7 @@ export class OpenStreetGeocode implements Geocoder<OpenStreetGeocode.Request, Op
         defaults(options, this.options);
 
         defaults(options.params, {
-            q: options.query,
+            q: options.params.query,
             limit: options.count,
         }, this.options.params);
 

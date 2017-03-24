@@ -80,7 +80,7 @@ table.ol-grid-table > td {
         let layers = map.getLayers().getArray().filter(l => l instanceof ol.layer.Vector).map((l: ol.layer.Vector) => l);
         searchProvider.options.params.layers = layers.filter(l => l.getSource() !== source);
 
-        searchProvider.execute(params).then(results =>
+        searchProvider.execute({ params: params }).then(results =>
             results.some(r => {
                 console.log(r);
                 if (r.address) {

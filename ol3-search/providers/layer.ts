@@ -56,8 +56,8 @@ export class LayerGeocode implements Geocoder<LayerGeocode.Request, LayerGeocode
     /**
      * Performs the actual search
      */
-    execute(params: LayerGeocode.Request) {
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<LayerGeocode.Request>) {
+        options = this.getParameters(options, this.options.map);
         let d = $.Deferred<Result<LayerGeocode.Result>[]>();
         let searchText = options.params.query;
         let results = <ol.Feature[]>[];
@@ -81,8 +81,8 @@ export class LayerGeocode implements Geocoder<LayerGeocode.Request, LayerGeocode
     }
 
     private getParameters(options: Request<LayerGeocode.Request>, map?: ol.Map) {
-        defaults(options.params, this.options.params);
         defaults(options, this.options);
+        defaults(options.params, this.options.params);
         return options;
     }
 
@@ -94,6 +94,7 @@ export class LayerGeocode implements Geocoder<LayerGeocode.Request, LayerGeocode
             let [lon, lat] = ol.extent.getCenter(f.getGeometry().getExtent());
 
             return {
+                placeId: "" + f.getId(),
                 title: f.get(this.options.params.propertyNames[0]),
                 lat: lat,
                 lon: lon,

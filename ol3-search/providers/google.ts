@@ -116,13 +116,14 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
         this.options = defaults(options || {}, GoogleGeocode.DEFAULT_OPTIONS);
     }
 
-    execute(params: GoogleGeocode.Request) {
-        params.address = params.address || params["query"];
-        delete params["query"];
-        
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<GoogleGeocode.Request>) {
+        options = this.getParameters(options, this.options.map);
 
         let d = $.Deferred<Result<GoogleGeocode.ResponseItem>[]>();
+
+        // cleanup request before sending
+        delete options.params.query;
+
         $.ajax({
             url: options.url,
             method: options.method,
@@ -138,10 +139,12 @@ export class GoogleGeocode implements Geocoder<GoogleGeocode.Request, GoogleGeoc
 
     private getParameters(options: Request<GoogleGeocode.Request>, map?: ol.Map) {
 
+        // apply default options
         defaults(options, this.options);
 
-        defaults(options.params, <any>{
-            address: options.query,
+        // tweak provider-specific settings
+        defaults(options.params, <GoogleGeocode.Request>{
+            address: options.params.query,
             count: options.count,
             key: options.key,
             language: options.lang,

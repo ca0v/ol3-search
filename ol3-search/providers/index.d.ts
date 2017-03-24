@@ -1,20 +1,28 @@
 /**
- * A common result representation
+ * Search field meta-data
  */
-export interface Result<T> {
-    title: string;
-    lon: number;
-    lat: number;
-    extent: ol.geom.Polygon;
-    address: {
+export interface SearchField {
+    // field name
+    name: string;
+    type?: "string" | "integer" | "number" | "boolean";
+    default?: string | number | boolean;
+    placeholder?: string;
+    // field label
+    alias?: string;
+    // validation expression
+    regex?: RegExp;
+    // dropdown/checkbox options
+    domain?: {
+        type: string;
         name: string;
-        road: string;
-        postcode: string;
-        city: string;
-        state: string;
-        country: string;
-    },
-    original: T
+        codedValues: {
+            name: string;
+            code: string;
+        }[];
+    };
+    editable?: boolean;
+    nullable?: boolean;
+    length?: number;
 }
 
 /**
@@ -32,8 +40,6 @@ export interface Request<T> {
     contentType?: 'application/xml' | 'application/json' | 'text/plain';
     // jsonp query parameter identifying the 'callback', required for bing
     callbackName?: string;
-    // fallback to service-specific query in params
-    query?: string;
     // API key, when applicable
     key?: string;
     // desired language, when applicable
@@ -44,34 +50,45 @@ export interface Request<T> {
     extent?: ol.Extent;
     // do not show results outside of extent
     bounded?: boolean;
-    // service-specific settings
-    params?: T
+    // generic and service-specific query settings
+    params?: T & {
+        // query to be turned into service-specific parameter
+        query?: string;
+    }
 }
 
 /**
- * Search field meta-data
+ * A common result representation
  */
-export interface SearchField {
-    name: string;
-    type?: "string" | "integer" | "number" | "boolean";
-    default?: string | number | boolean;
-    placeholder?: string;
-    alias?: string;
-    regex?: RegExp;
-    domain?: {
-        type: string;
+export interface Result<T> {
+    // idenfier the search result to detect and prevent duplicates
+    placeId: string;
+    // general description from service
+    title: string;
+    // specific location (change to ol.geom.Point)
+    lon: number;
+    lat: number;
+    // general location
+    extent: ol.geom.Polygon;
+    // best attempt and making it look like an address (drop this part?)
+    address: {
         name: string;
-        codedValues: {
-            name: string;
-            code: string;
-        }[];
+        road: string;
+        postcode: string;
+        city: string;
+        state: string;
+        country: string;
     };
-    editable?: boolean;
-    nullable?: boolean;
-    length?: number;
+    // full content of original response
+    original: T;
 }
 
+/**
+ * Minimal provider interface
+ */
 export interface Geocoder<TRequest, TResult> {
+    // suggested search fields
     fields: SearchField[];
-    execute(options: TRequest): JQueryPromise<Result<TResult>[]>;
+    // execute the query/geocoding service
+    execute(options: Request<TRequest>): JQueryPromise<Result<TResult>[]>;
 }

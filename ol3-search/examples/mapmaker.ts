@@ -35,20 +35,60 @@ export function create() {
         style: (feature: ol.Feature, resolution: number) => {
             let style = feature.getStyle();
             if (!style) {
-                style = symbolizer.fromJson({
-                    circle: {
-                        radius: 4,
-                        fill: {
-                            color: "rgba(33, 33, 33, 0.2)"
-                        },
-                        stroke: {
-                            color: "#F00"
-                        }
-                    },
-                    text: {
-                        text: feature.get("text")
-                    }
-                });
+                switch (feature.getGeometry().getType()) {
+                    case "Point":
+                        style = symbolizer.fromJson({
+                            circle: {
+                                radius: 4,
+                                fill: {
+                                    color: "rgba(33, 33, 33, 0.2)"
+                                },
+                                stroke: {
+                                    color: "#F00"
+                                }
+                            },
+                            text: {
+                                text: feature.get("text")
+                            }
+                        });
+                        break;
+                    case "LineString":
+                        style = symbolizer.fromJson({
+                            fill: {
+                                color: "rgba(33, 33, 33, 0.2)"
+                            },
+                            stroke: {
+                                color: "#F00"
+                            },
+                            text: {
+                                text: feature.get("text")
+                            }
+                        });
+                        break;
+                    default:
+                        debugger;
+                        style = symbolizer.fromJson({
+                            fill: {
+                                color: "rgba(33, 33, 33, 0.2)"
+                            },
+                            stroke: {
+                                color: "#F00"
+                            },
+                            circle: {
+                                radius: 4,
+                                fill: {
+                                    color: "rgba(33, 33, 33, 0.2)"
+                                },
+                                stroke: {
+                                    color: "#F00"
+                                }
+                            },
+                            text: {
+                                text: feature.get("text")
+                            }
+                        });
+                        break;
+                }
                 feature.setStyle(style);
             }
             return <ol.style.Style>style;

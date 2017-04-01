@@ -123,8 +123,8 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
         ];
     }
 
-    execute(params: Request<WfsGeocode.WfsRequest>) {
-        let options = this.getParameters({ params: params }, this.options.map);
+    execute(options: Request<WfsGeocode.WfsRequest>) {
+        options = this.getParameters(options, this.options.map);
         let d = $.Deferred<Result<WfsGeocode.WfsResult>[]>();
         $.ajax({
             url: options.url,
@@ -145,27 +145,30 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
 
         let format = new ol.format.WFS();
 
-        let searchText = options.params.query.replace(/ /g, "*");
-        let filters = options.params.searchNames.map(searchName => olFormatFilter.like(searchName, `*${searchText}*`));
-        let filter = (filters.length > 1) ? olFormatFilter.or.apply(olFormatFilter.or, filters) : filters[0];
+        if (options.params.query) {
+            let searchText = options.params.query.replace(/ /g, "*");
+            let filters = options.params.searchNames.map(searchName => olFormatFilter.like(searchName, `*${searchText}*`));
+            let filter = (filters.length > 1) ? olFormatFilter.or.apply(olFormatFilter.or, filters) : filters[0];
+            options.filter = filter;
+        }
 
         if (map && options.bounded && !options.extent) {
             let extent = map.getView().calculateExtent(map.getSize());
             let p = new ol.geom.Polygon([[ol.extent.getBottomLeft(extent)], [ol.extent.getTopRight(extent)]]);
-            options.extent = p.transform(map.getView().getProjection(), "EPSG:4326").getExtent();
+            options.extent = p.transform(map.getView().getProjection(), options.internalSrs).getExtent();
         }
 
         let getFeatureRequest = <HTMLElement>format.writeGetFeature({
             featureNS: options.params.featureNS,
             featurePrefix: options.params.featurePrefix,
             featureTypes: options.params.featureTypes,
-            srsName: "EPSG:4326",
-            outputFormat: '',
+            srsName: options.internalSrs,
+            outputFormat: 'GML3',
             maxFeatures: <number>options.count,
             geometryName: 'geom',
             propertyNames: options.params.propertyNames,
             bbox: <ol.Extent>options.extent,
-            filter: filter
+            filter: options.filter
         });
 
         options.params = <any>getFeatureRequest.outerHTML;
@@ -179,8 +182,6 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
 
         let asExtent = (r: ol.Feature) => {
             let extent = r.getGeometry().getExtent();
-            // results have xy reversed, not sure how to configure against it
-            extent = [extent[1], extent[0], extent[3], extent[2]];
             return ol.geom.Polygon.fromExtent(extent);
         };
 

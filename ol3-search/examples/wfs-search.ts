@@ -7,6 +7,21 @@ import { cssin, mixin, navigation } from "ol3-fun";
 
 import { create as makeMap } from "./mapmaker";
 
+const internalSrs = "EPSG:3857";
+
+function buffer([x, y]: ol.Pixel, map: ol.Map, pixels: number = 4) {
+    let sw = new ol.geom.Point(map.getCoordinateFromPixel([x - pixels, y + pixels]));
+    let ne = new ol.geom.Point(map.getCoordinateFromPixel([x + pixels, y - pixels]));
+
+    let extent = ol.extent.createEmpty();
+    ol.extent.extend(extent, sw.getExtent());
+    ol.extent.extend(extent, ne.getExtent());
+
+    return ol.geom.Polygon
+        .fromExtent(extent)
+        .transform(map.getView().getProjection(), internalSrs);
+}
+
 export function run() {
 
     cssin("examples/wfs-search", `
@@ -55,15 +70,16 @@ table.ol-grid-table > td {
     let { map, source } = makeMap();
 
     let searchProvider = new Geocoder({
-        url: 'http://localhost:8080/geoserver/ips/wfs',
+        url: 'http://localhost:8080/geoserver/cite/wfs',
         count: 1,
         map: map,
+        internalSrs: internalSrs,
         params: {
-            featureNS: 'http://inforpublicsector.com/geoserver',
-            featurePrefix: 'ips',
-            featureTypes: ['ADDRESS'],
-            searchNames: 'CITY,STNAME,STATE'.split(','),
-            propertyNames: ['STNAME', 'GEOM']
+            featureNS: 'http://www.opengeospatial.net/cite',
+            featurePrefix: 'cite',
+            featureTypes: ['lines'],
+            searchNames: 'name'.split(','),
+            propertyNames: ['name', 'highway', 'geom']
         }
     });
 
@@ -92,14 +108,20 @@ table.ol-grid-table > td {
                 }
                 results.some(r => {
                     console.log(r);
+                    if (r.original instanceof ol.Feature) {
+                        let geom = (r.original.clone()).getGeometry().transform(internalSrs, toSrs);
+                        let feature = new ol.Feature(geom);
+                        feature.set("text", r.title);
+                        source.addFeature(feature);
+                    }
                     if (r.address) {
-                        let [lon, lat] = ol.proj.transform([r.lon, r.lat], "EPSG:4326", toSrs);
+                        let [lon, lat] = ol.proj.transform([r.lon, r.lat], internalSrs, toSrs);
                         let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                         feature.set("text", r.title);
                         source.addFeature(feature);
                     }
                     if (r.extent) {
-                        let feature = new ol.Feature(r.extent.transform("EPSG:4326", toSrs));
+                        let feature = new ol.Feature(r.extent.transform(internalSrs, toSrs));
                         navigation.zoomToFeature(map, feature, { minResolution: 1, padding: 200 });
                     }
                     return true;
@@ -120,5 +142,11 @@ table.ol-grid-table > td {
     });
 
     map.addControl(form);
+
+    map.on("click", (args: ol.MapBrowserPointerEvent) => {
+        let geom = buffer(args.pixel, map, 12);
+        let filter = new ol.format.filter.Intersects("geom", geom, internalSrs);
+        search({ filter: filter }, false);
+    });
 
 }

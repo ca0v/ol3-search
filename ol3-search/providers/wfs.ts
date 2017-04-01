@@ -130,7 +130,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             url: options.url,
             method: options.method,
             contentType: options.contentType,
-            data: options.params,
+            data: options.data || options.params,
             dataType: options.dataType,
             jsonp: options.callbackName
         })
@@ -171,7 +171,7 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             filter: options.filter
         });
 
-        options.params = <any>getFeatureRequest.outerHTML;
+        options.data = <any>getFeatureRequest.outerHTML;
 
         return options;
     }
@@ -189,9 +189,13 @@ export class WfsGeocode implements Geocoder<WfsGeocode.WfsRequest, WfsGeocode.Wf
             let extent = asExtent(f);
             let [lon, lat] = extent.getInteriorPoint().getCoordinates();
 
+            let title = this.options.params.propertyNames.map(n => f.get(n)).filter(v => !!v && typeof v !== "object").join(" - ");
+            if (!title) title = f.getProperties().map(n => f.get(n)).filter(v => !!v && typeof v === "string").join(" - ");
+            if (!title) title = "" + f.getId();
+
             return {
                 placeId: "" + f.getId(),
-                title: f.get(this.options.params.propertyNames[0]),
+                title: title,
                 lat: lat,
                 lon: lon,
                 extent: extent,

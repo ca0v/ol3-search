@@ -77,7 +77,7 @@ table.ol-grid-table > td {
         params: {
             featureNS: 'http://www.opengeospatial.net/cite',
             featurePrefix: 'cite',
-            featureTypes: ['lines'],
+            featureTypes: ['lines', 'points'],
             searchNames: 'name'.split(','),
             propertyNames: ['name', 'highway', 'geom']
         }
@@ -96,7 +96,7 @@ table.ol-grid-table > td {
     });
 
 
-    let search = (value: any, bounded: boolean) => {
+    let search = (value: any) => {
 
         let toSrs = map.getView().getProjection();
 
@@ -104,7 +104,11 @@ table.ol-grid-table > td {
             .then(results => {
                 if (!results.length) {
                     // try again without extent limitation
-                    bounded && search(value, false);
+                    if (value.bounded) {
+                        value.bounded = false;
+                        value.extent = null;
+                        search(value);
+                    }
                 }
                 results.some(r => {
                     console.log(r);
@@ -114,7 +118,7 @@ table.ol-grid-table > td {
                         feature.set("text", r.title);
                         source.addFeature(feature);
                     }
-                    if (r.address) {
+                    else if (r.address) {
                         let [lon, lat] = ol.proj.transform([r.lon, r.lat], internalSrs, toSrs);
                         let feature = new ol.Feature(new ol.geom.Point([lon, lat]));
                         feature.set("text", r.title);
@@ -138,7 +142,10 @@ table.ol-grid-table > td {
     }) => {
         if (!args.value) return;
         console.log("search", args.value);
-        search(args.value, args.value.bounded);
+        search({
+            bounded: args.value.bounded || false,
+            params: args.value
+        });
     });
 
     map.addControl(form);
@@ -146,7 +153,10 @@ table.ol-grid-table > td {
     map.on("click", (args: ol.MapBrowserPointerEvent) => {
         let geom = buffer(args.pixel, map, 12);
         let filter = new ol.format.filter.Intersects("geom", geom, internalSrs);
-        search({ filter: filter }, false);
+        search({
+            bounded: false,
+            filter: filter
+        });
     });
 
 }

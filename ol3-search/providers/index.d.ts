@@ -46,6 +46,10 @@ export interface Request<T> {
     lang?: string;
     // limit the number of return values
     count?: number;
+    // ol.format filter
+    filter?: any; //ol.format;
+    // EPSG:4326
+    internalSrs?: string;
     // prefer results within this extent
     extent?: ol.Extent;
     // do not show results outside of extent

@@ -19,5 +19,5 @@ Input controls hooked to POI services
 * `>npm run dev-for-examples`
 
 ## Consume
-* `>npm install https://github.com/ca0v/ol3-fun/tarball/v5.1.3`
+* `>npm install https://github.com/ca0v/ol3-search/tarball/v5.1.3`
 * for sample consumer see https://github.com/ca0v/ol3-lab/tree/v5.1.3

@@ -25,7 +25,7 @@ function checkDefaultInputOptions(options: IOptions) {
     shouldEqual(options.autoClear, false, "autoClear");
     shouldEqual(options.autoCollapse, true, "autoCollapse");
     shouldEqual(options.canCollapse, true, "canCollapse");
-    shouldEqual(options.className, "ol-input", "className");
+    shouldEqual(options.className, "ol-search", "className");
     should(options.closedText.length > 0, "closedText");
     shouldEqual(options.expanded, false, "expanded");
     shouldEqual(options.hideButton, false, "hideButton");

@@ -436,7 +436,7 @@ define("ol3-search/ol3-search", ["require", "exports", "openlayers", "node_modul
             {
                 var body_1 = form.getElementsByTagName("tbody")[0];
                 body_1.innerHTML = "";
-                options.fields.forEach(function (field) {
+                options.fields && options.fields.forEach(function (field) {
                     field.alias = field.alias || field.name;
                     field.name = field.name || field.alias;
                     var tr = document.createElement("tr");
@@ -544,8 +544,8 @@ define("ol3-search/ol3-search", ["require", "exports", "openlayers", "node_modul
         SearchForm.create = function (options) {
             // provide computed defaults        
             options = index_1.mixin({
-                openedText: options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
-                closedText: options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
+                openedText: options && options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
+                closedText: options && options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
             }, options || {});
             // provide static defaults        
             options = index_1.mixin(index_1.mixin({}, defaults), options);

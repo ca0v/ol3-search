@@ -9,7 +9,7 @@
         "sourceMap": true,
         "rootDir": "../",
         "outFile": "../built/tests/spec/index.js",
-        "moduleResolution": "node",
+        "moduleResolution": "classic",
         "baseUrl": "../node_modules"
     },
     "include": [

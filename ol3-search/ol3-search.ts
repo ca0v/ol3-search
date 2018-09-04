@@ -60,8 +60,8 @@ export class SearchForm extends ol.control.Control {
 
         // provide computed defaults        
         options = mixin({
-            openedText: options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
-            closedText: options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
+            openedText: options && options.className && -1 < options.className.indexOf("left") ? expando.left : expando.right,
+            closedText: options && options.className && -1 < options.className.indexOf("left") ? expando.right : expando.left,
         }, options || {});
 
         // provide static defaults        
@@ -133,7 +133,7 @@ export class SearchForm extends ol.control.Control {
         {
             let body = form.getElementsByTagName("tbody")[0];
             body.innerHTML = "";
-            options.fields.forEach(field => {
+            options.fields && options.fields.forEach(field => {
                 field.alias = field.alias || field.name;
                 field.name = field.name || field.alias;
 

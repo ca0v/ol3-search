@@ -1,6 +1,15 @@
+import "./form-options";
+import "./bing-search";
+import "./google-search";
+import "./layer-search";
+import "./mapquest-search";
+import "./osm-search";
+import "./wfs-search";
+import "./ol3-search";
+
 export function run() {
     let l = window.location;
-    let path = `${l.origin}${l.pathname}?run=ol3-search/examples/`;
+    let path = `${l.origin}${l.pathname}?run=examples/`;
     let labs = `
     form-options
     bing-search

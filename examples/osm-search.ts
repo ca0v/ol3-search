@@ -1,5 +1,5 @@
-import { OpenStreetGeocode as Geocoder } from "../providers/osm";
-import { cssin } from "ol3-fun";
+import { OpenStreetGeocode as Geocoder } from "../ol3-search/providers/osm";
+import { cssin } from "ol3-fun/index";
 import { create as makeMap } from "./mapmaker";
 import { create as makeForm } from "./formmaker";
 

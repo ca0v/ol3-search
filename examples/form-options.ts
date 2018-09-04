@@ -1,5 +1,5 @@
-import { SearchForm } from "../ol3-search";
-import { defaults } from "ol3-fun";
+import { SearchForm } from "../index";
+import { defaults } from "ol3-fun/index";
 
 export function run() {
 

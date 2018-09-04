@@ -1,9 +1,9 @@
 import ol = require("openlayers");
 import $ = require("jquery");
 
-import { SearchForm } from "../ol3-search";
-import { WfsGeocode as Geocoder } from "../providers/wfs";
-import { cssin, mixin, navigation } from "ol3-fun";
+import { SearchForm } from "../index";
+import { WfsGeocode as Geocoder } from "../ol3-search/providers/wfs";
+import { cssin, mixin, navigation } from "ol3-fun/index";
 
 import { create as makeMap } from "./mapmaker";
 

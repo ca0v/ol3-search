@@ -1,5 +1,5 @@
-import { GoogleGeocode as Geocoder } from "../providers/google";
-import { cssin } from "ol3-fun";
+import { GoogleGeocode as Geocoder } from "../ol3-search/providers/google";
+import { cssin } from "ol3-fun/index";
 import { create as makeMap } from "./mapmaker";
 import { create as makeForm } from "./formmaker";
 

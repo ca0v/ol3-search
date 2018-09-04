@@ -1,11 +1,11 @@
-import { BingGeocode as Geocoder } from "../providers/bing";
-import { cssin } from "ol3-fun";
+import { MapQuestGeocode as Geocoder } from "../ol3-search/providers/mapquest";
+import { cssin } from "ol3-fun/index";
 import { create as makeMap } from "./mapmaker";
 import { create as makeForm } from "./formmaker";
 
 export function run() {
 
-    cssin("examples/ol3-search", `
+    cssin("examples/mapquest-search", `
 
 .ol-grid.statecode .ol-grid-container {
     background-color: white;
@@ -48,12 +48,12 @@ table.ol-grid-table > td {
 
     `);
 
+
     let { map, source } = makeMap();
 
     let searchProvider = new Geocoder({
         map: map,
         count: 1,
-        key: 'As7mdqzf-iBHBqrSHonXJQHrytZ_SL9Z2ojSyOAYoWTceHYYLKUy0C8X8R5IABRg'
     });
 
     makeForm({
@@ -61,4 +61,5 @@ table.ol-grid-table > td {
         searchProvider: searchProvider,
         source: source
     });
+
 }

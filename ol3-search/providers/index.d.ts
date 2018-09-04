@@ -59,6 +59,7 @@ export interface Request<T> {
         // query to be turned into service-specific parameter
         query?: string;
     }
+    data?: any;
 }
 
 /**

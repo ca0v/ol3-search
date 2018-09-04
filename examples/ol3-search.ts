@@ -1,16 +1,16 @@
 import ol = require("openlayers");
 import $ = require("jquery");
 
-import { SearchForm } from "../ol3-search";
+import { SearchForm } from "../ol3-search/ol3-search";
 
-import { BingGeocode } from "../providers/bing";
-import { GoogleGeocode } from "../providers/google";
-import { MapQuestGeocode } from "../providers/mapquest";
-import { OpenStreetGeocode } from "../providers/osm";
-import { WfsGeocode } from "../providers/wfs";
+import { BingGeocode } from "../ol3-search/providers/bing";
+import { GoogleGeocode } from "../ol3-search/providers/google";
+import { MapQuestGeocode } from "../ol3-search/providers/mapquest";
+import { OpenStreetGeocode } from "../ol3-search/providers/osm";
+import { WfsGeocode } from "../ol3-search/providers/wfs";
 
-import { cssin, mixin, navigation } from "ol3-fun";
-import { Geocoder, Request, Result, SearchField } from "../providers/index";
+import { cssin, mixin, navigation } from "ol3-fun/index";
+import { Geocoder, Request, Result, SearchField } from "../ol3-search/providers/index";
 
 import { create as makeMap } from "./mapmaker";
 

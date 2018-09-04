@@ -1,6 +1,8 @@
 import ol = require("openlayers");
-import { html, cssin, debounce, mixin, pair, range } from "ol3-fun";
-import { SearchField } from "./providers";
+import { olx } from "openlayers";
+
+import { html, cssin, debounce, mixin, pair, range } from "ol3-fun/index";
+import { SearchField } from "./providers/index";
 
 let olcss = {
     CLASS_CONTROL: 'ol-control',
@@ -51,6 +53,8 @@ const defaults: IOptions = {
 };
 
 export class SearchForm extends ol.control.Control {
+
+    static DEFAULT_OPTIONS = defaults;
 
     static create(options?: IOptions): SearchForm {
 
@@ -321,14 +325,14 @@ ${positions.join('\n')}`));
         this.form.focus();
     }
 
-    on(type: string, cb: Function);
-    on<T>(type: "change", cb: (args: {
+    on(type: string, cb: ol.EventsListenerFunctionType): any;
+    on<T>(type: "change", cb: ((args: {
         type: string;
         target: SearchForm;
         value: { [name: string]: any };
-    }) => void);
-    on(type: string, cb: Function) {
-        super.on(type, cb);
+    }) => void) | ol.EventsListenerFunctionType);
+    on(type: string, cb: ol.EventsListenerFunctionType) {
+        return super.on(type, cb);
     }
 
     get value() {

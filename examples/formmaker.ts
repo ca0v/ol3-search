@@ -1,7 +1,7 @@
 import ol = require("openlayers");
-import { navigation } from "ol3-fun";
-import { SearchForm } from "../ol3-search";
-import { Geocoder } from "../providers/index";
+import { navigation } from "ol3-fun/index";
+import { SearchForm } from "../index";
+import { Geocoder } from "../ol3-search/providers/index";
 
 export function create(options: {
     map: ol.Map,

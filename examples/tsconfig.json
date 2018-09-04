@@ -1,16 +1,16 @@
 {
     "compilerOptions": {
+        "removeComments": true,
         "module": "amd",
         "target": "es5",
-        "declaration": true,
+        "declaration": false,
         "noImplicitAny": false,
-        "outFile": "./built/index.js",
+        "outFile": "../built/examples.max.js",
         "sourceMap": true,
         "moduleResolution": "classic",
-        "baseUrl": "./node_modules"
+        "baseUrl": "../node_modules"
     },
     "include": [
-        "index.ts",
-        "ol3-search/**/*.ts"
+        "index.ts"
     ]
 }

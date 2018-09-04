@@ -1,4 +1,7 @@
 *.js
 bower_components
+node_modules
 typings
 *.log
+!built/**
+!static/**

@@ -1,6 +1,6 @@
 import $ = require("jquery");
 import ol = require("openlayers");
-import { defaults } from "ol3-fun";
+import { defaults } from "ol3-fun/index";
 import { Geocoder, Request, Result, SearchField } from "./index";
 
 const SampleResponse = [{

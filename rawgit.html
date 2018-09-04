@@ -1,65 +1,11 @@
-<!DOCTYPE html>
 <html>
 
 <head>
-    <meta charset="utf-8" />
-    <title>OpenLayers 3 - Popup</title>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
-    <style>
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1/ol.css');
-        .map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.2/require.min.js"></script>
+    <script src="./loaders/require.js" data-main="../built/loaders/examples"></script>
 </head>
 
 <body>
-    <div class="map"></div>
-    <script>
-        (() => {
-            function getParameterByName(name, url = window.location.href) {
-                name = name.replace(/[\[\]]/g, "\\$&");
-                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-                    results = regex.exec(url);
-                if (!results) return null;
-                if (!results[2]) return '';
-                return decodeURIComponent(results[2].replace(/\+/g, " "));
-            }
-
-            let debug = getParameterByName("debug") === "1";
-            let localhost = window.location.hostname === "localhost";
-
-            require.config({
-
-                packages: [
-                    {
-                        name: 'openlayers',
-                        location: localhost ? "./bower_components/openlayers" : 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1',
-                        main: debug ? 'ol-debug' : 'ol'
-                    },
-                    {
-                        name: 'jquery',
-                        location: localhost ? "./bower_components/jquery/dist" : 'https://cdn.rawgit.com/jquery/jquery-dist/3.1.1/dist',
-                        main: debug ? 'jquery' : 'jquery.min'
-                    }
-                ],
-
-                deps: [
-                    "built/index"
-                ],
-
-                callback: () => {
-                    require([getParameterByName("run") || "ol3-search/examples/index"], test => test.run());
-                }
-            });
-
-        })();
-    </script>
+    <div id="map" class="map"></div>
 </body>
 
 </html>

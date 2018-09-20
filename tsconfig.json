@@ -1,16 +1,14 @@
 {
-    "compilerOptions": {
-        "module": "amd",
-        "target": "es5",
-        "declaration": true,
-        "noImplicitAny": false,
-        "outFile": "./built/index.js",
-        "sourceMap": true,
-        "moduleResolution": "classic",
-        "baseUrl": "./node_modules"
-    },
-    "include": [
-        "index.ts",
-        "ol3-search/**/*.ts"
-    ]
+	"compilerOptions": {
+		"module": "amd",
+		"target": "es5",
+		"declaration": true,
+		"strict": true,
+		"outFile": "./built/index.js",
+		"sourceMap": true,
+		"moduleResolution": "classic",
+		"baseUrl": "./node_modules",
+		"lib": ["esnext", "dom"]
+	},
+	"include": ["index.ts", "ol3-search/**/*.ts"]
 }

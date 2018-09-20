@@ -1,18 +1,8 @@
 {
-    "compilerOptions": {
-        "allowJs": false,
-        "removeComments": true,
-        "declaration": false,
-        "module": "amd",
-        "target": "es5",
-        "noImplicitAny": false,
-        "sourceMap": true,
-        "rootDir": "../",
-        "outFile": "../built/tests/spec/index.js",
-        "moduleResolution": "classic",
-        "baseUrl": "../node_modules"
-    },
-    "include": [
-        "index.ts"
-    ]
+	"extends": "../tsconfig",
+	"compilerOptions": {
+		"declaration": false,
+		"outFile": "../built/tests/spec/index.js"
+	},
+	"include": ["index.ts"]
 }

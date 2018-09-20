@@ -1,16 +1,10 @@
 {
-    "compilerOptions": {
-        "removeComments": true,
-        "module": "amd",
-        "target": "es5",
-        "declaration": false,
-        "noImplicitAny": false,
-        "outFile": "../built/examples.max.js",
-        "sourceMap": true,
-        "moduleResolution": "classic",
-        "baseUrl": "../node_modules"
-    },
-    "include": [
-        "index.ts"
-    ]
+	"extends": "../tsconfig",
+	"compilerOptions": {
+		"strict": false,
+		"strictNullChecks": false,
+		"declaration": false,
+		"outFile": "../built/examples.max.js"
+	},
+	"include": ["index.ts"]
 }
